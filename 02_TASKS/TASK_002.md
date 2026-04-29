@@ -1,6 +1,6 @@
 TASK ID: 002
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the SAM.gov federal data ingestion pipeline. Pull real contract opportunities filtered to Pittsburgh/Allegheny County and surrounding counties. Store normalized records in Supabase. Schedule daily refresh via Netlify cron.

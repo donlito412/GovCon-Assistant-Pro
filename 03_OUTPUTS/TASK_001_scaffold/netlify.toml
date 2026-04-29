@@ -11,13 +11,15 @@
 # ============================================================
 
 # Federal contracts — SAM.gov (TASK_002)
+# 11:00 UTC = 06:00 ET (EST, UTC-5) — adjusts to 07:00 EDT in summer
 [functions."ingest-federal"]
-  schedule = "0 6 * * *"
+  schedule = "0 11 * * *"
 
 # State + local contracts — PA eMarketplace, PA Treasury,
 # Allegheny County, City of Pittsburgh, URA (TASK_003)
+# 12:00 UTC = 07:00 ET (EST, UTC-5) — adjusts to 08:00 EDT in summer
 [functions."ingest-state-local"]
-  schedule = "0 7 * * *"
+  schedule = "0 12 * * *"
 
 # Educational institution contracts —
 # Pitt, CMU, CCAC, PGH Schools, Duquesne (TASK_011)

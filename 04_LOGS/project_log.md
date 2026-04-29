@@ -104,6 +104,63 @@ Status: DONE
 
 ---
 
+## 2026-04-29 (TASK_002)
+
+Agent: Claude
+Task ID: TASK_002
+Task Goal: Build SAM.gov federal data ingestion pipeline — fetch Pittsburgh-area contract opportunities, normalize, deduplicate, and upsert to Supabase. Daily cron via Netlify.
+Output Files:
+  - /03_OUTPUTS/TASK_002_federal_ingestion/lib/geo/pittsburgh_zips.ts
+  - /03_OUTPUTS/TASK_002_federal_ingestion/lib/ingestion/samgov.ts
+  - /03_OUTPUTS/TASK_002_federal_ingestion/lib/ingestion/normalize.ts
+  - /03_OUTPUTS/TASK_002_federal_ingestion/app/api/ingest/federal/route.ts
+  - /03_OUTPUTS/TASK_002_federal_ingestion/scripts/test_samgov_fetch.ts
+  - /03_OUTPUTS/TASK_001_scaffold/netlify.toml (updated: ingest-federal cron corrected to 0 11 * * * = 06:00 ET)
+Notes:
+  - SAM.gov Get Opportunities v2 client with full pagination (100/page, up to 10,000 results)
+  - Exponential backoff on HTTP 429 (up to 5 retries, max 60s delay)
+  - Pittsburgh area zip filter applied post-fetch (Allegheny + 4 surrounding counties)
+  - dedup_hash = SHA-256(lower(trim(title)) + lower(trim(agency)) + deadline_date)
+  - On dedup_hash conflict: appends "federal_samgov" to canonical_sources, does NOT insert duplicate
+  - threshold_category derived from baseAndAllOptionsValue (Oct 2025 FAR thresholds)
+  - naics_sector derived from 2-digit NAICS prefix (matches naics_sectors table)
+  - contract_type mapped from SAM.gov noticeType (Presolicitation→RFI, Solicitation→RFP, etc.)
+  - POST /api/ingest/federal secured with x-ingest-secret header
+  - Test script covers: zip filter, county filter, dedup hash determinism, threshold categories, contract type mapping, live API call, Pittsburgh filter on real data
+Next Step: TASK_003 — State + local contracts ingestion (PA + Pittsburgh + Allegheny County + URA)
+Status: DONE
+
+---
+
+## 2026-04-29 (TASK_003)
+
+Agent: Claude
+Task ID: TASK_003
+Task Goal: Build state/local contract scrapers — PA eMarketplace, PA Treasury, Allegheny County, City of Pittsburgh
+Output Files:
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/shared/normalize_shared.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/pa_emarketplace.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/pa_treasury.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/allegheny_county.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/pittsburgh_city.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/app/api/ingest/state-local/route.ts
+  - /03_OUTPUTS/TASK_003_state_local_ingestion/scripts/test_scrapers.ts
+  - /03_OUTPUTS/TASK_001_scaffold/netlify.toml (updated: ingest-state-local cron corrected to 0 12 * * * = 07:00 ET)
+Notes:
+  - All scrapers use fetch + cheerio (no Puppeteer) — respects robots.txt
+  - Each scraper is fully isolated: one failure does not block others
+  - PA Treasury uses ASP.NET form POST with __VIEWSTATE extraction
+  - City of Pittsburgh tries OpenGov JSON API first, falls back to HTML scraping, then OMB page
+  - Allegheny County scrapes both Purchasing and Public Works bid pages
+  - Dedup: primary on dedup_hash, secondary on solicitation_number within same source
+  - Shared normalize_shared.ts: computeDedupHash, deriveThresholdCategory, mapContractType, parseDollarString, parseToIso, getNaicsSector
+  - All scrapers log: started, N scraped, N new, N deduped, errors, duration
+  - Test script: unit tests for shared utils + live scraper tests for all 4 sources
+Next Step: TASK_004 — Contract discovery UI (search, filter, detail pages)
+Status: DONE
+
+---
+
 ## LOG TEMPLATE (copy for each completed task)
 
 [DATE]

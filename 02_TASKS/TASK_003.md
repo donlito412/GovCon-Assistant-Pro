@@ -1,6 +1,6 @@
 TASK ID: 003
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build scrapers for Pennsylvania state contracts (PA eMarketplace + PA Treasury) and local Pittsburgh/Allegheny County contracts. Store normalized records in Supabase alongside federal data.
