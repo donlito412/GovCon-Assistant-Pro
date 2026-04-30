@@ -12,7 +12,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { fetchAllPAOpportunities } from '../../../../lib/ingestion/samgov';
 import { normalizePittsburghOpportunities, type NormalizedOpportunity } from '../../../../lib/ingestion/normalize';
 

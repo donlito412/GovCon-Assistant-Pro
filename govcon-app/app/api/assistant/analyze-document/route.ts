@@ -7,7 +7,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import Anthropic from '@anthropic-ai/sdk';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { DOCUMENT_ANALYSIS_PROMPT } from '../../../../lib/ai/prompts';
 
 export const maxDuration = 120;

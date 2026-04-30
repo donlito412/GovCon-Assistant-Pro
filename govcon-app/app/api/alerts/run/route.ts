@@ -13,7 +13,7 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { AlertEmail } from '../../../../lib/email/alert-email';
 
 // ---- Env ----

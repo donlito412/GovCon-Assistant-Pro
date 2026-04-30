@@ -6,7 +6,7 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
 async function getMyProfile(supabase: any, userId: string) {
   const { data } = await supabase

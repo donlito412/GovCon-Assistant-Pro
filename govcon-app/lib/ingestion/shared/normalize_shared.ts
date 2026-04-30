@@ -5,7 +5,7 @@
 // ============================================================
 
 import { createHash } from 'crypto';
-import type { ThresholdCategory, ContractType, SetAside, OpportunitySource } from '../../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/types';
+import type { ThresholdCategory, ContractType, SetAside, OpportunitySource } from '@/lib/types';
 
 // ============================================================
 // NAICS SECTOR MAP (mirrors naics_sectors table in Supabase)

@@ -13,13 +13,13 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 import { scrapeEMarketplace } from '../../../../lib/ingestion/pa_emarketplace';
 import { scrapePaTreasury } from '../../../../lib/ingestion/pa_treasury';
 import { scrapeAlleghenyCounty } from '../../../../lib/ingestion/allegheny_county';
 import { scrapePittsburghCity } from '../../../../lib/ingestion/pittsburgh_city';
 import type { ScrapedOpportunity, ScraperResult } from '../../../../lib/ingestion/shared/normalize_shared';
-import type { OpportunitySource } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/types';
+import type { OpportunitySource } from '@/lib/types';
 
 const UPSERT_BATCH_SIZE = 50;
 

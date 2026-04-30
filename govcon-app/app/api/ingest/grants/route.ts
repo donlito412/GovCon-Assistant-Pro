@@ -6,12 +6,12 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
-import { ingestGrantsGov } from '../../../../../../03_OUTPUTS/TASK_012_grants/lib/ingestion/grants/grantsgov';
-import { ingestPaGrants }  from '../../../../../../03_OUTPUTS/TASK_012_grants/lib/ingestion/grants/pa_grants';
-import { ingestUraGrants } from '../../../../../../03_OUTPUTS/TASK_012_grants/lib/ingestion/grants/ura_grants';
-import { ingestSbaGrants } from '../../../../../../03_OUTPUTS/TASK_012_grants/lib/ingestion/grants/sba_grants';
-import type { GrantRecord } from '../../../../../../03_OUTPUTS/TASK_012_grants/lib/ingestion/grants/types';
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { ingestGrantsGov } from '@/lib/ingestion/grants/grantsgov';
+import { ingestPaGrants }  from '@/lib/ingestion/grants/pa_grants';
+import { ingestUraGrants } from '@/lib/ingestion/grants/ura_grants';
+import { ingestSbaGrants } from '@/lib/ingestion/grants/sba_grants';
+import type { GrantRecord } from '@/lib/ingestion/grants/types';
 
 const INGEST_SECRET = process.env.INGEST_SECRET ?? '';
 const BATCH_SIZE    = 50;

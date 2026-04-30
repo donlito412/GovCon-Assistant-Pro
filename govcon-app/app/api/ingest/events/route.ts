@@ -5,14 +5,14 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
-import { scrapeCityCouncil }          from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/city_council';
-import { scrapeCityPlanning }         from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/city_planning';
-import { scrapeUraMeetings }          from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/ura_meetings';
-import { scrapeAlleghenyCouncil }     from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/allegheny_council';
-import { scrapeEventbrite }           from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/eventbrite';
-import { scrapePghBusinessCollective } from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/pgh_business_collective';
-import type { EventRecord } from '../../../../../../03_OUTPUTS/TASK_013_events/lib/ingestion/events/types';
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { scrapeCityCouncil }          from '@/lib/ingestion/events/city_council';
+import { scrapeCityPlanning }         from '@/lib/ingestion/events/city_planning';
+import { scrapeUraMeetings }          from '@/lib/ingestion/events/ura_meetings';
+import { scrapeAlleghenyCouncil }     from '@/lib/ingestion/events/allegheny_council';
+import { scrapeEventbrite }           from '@/lib/ingestion/events/eventbrite';
+import { scrapePghBusinessCollective } from '@/lib/ingestion/events/pgh_business_collective';
+import type { EventRecord } from '@/lib/ingestion/events/types';
 
 const INGEST_SECRET = process.env.INGEST_SECRET ?? '';
 const BATCH_SIZE    = 50;

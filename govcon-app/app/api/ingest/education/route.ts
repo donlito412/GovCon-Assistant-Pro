@@ -6,14 +6,14 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
-import { computeDedupHash } from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/shared/normalize_education';
-import { scrapePitt }       from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/education/pitt';
-import { scrapeCmu }        from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/education/cmu';
-import { scrapeCcac }       from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/education/ccac';
-import { scrapePghSchools } from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/education/pgh_schools';
-import { scrapeDuquesne }   from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/education/duquesne';
-import type { ScrapedOpportunity } from '../../../../../../03_OUTPUTS/TASK_011_education_ingestion/lib/ingestion/shared/normalize_education';
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { computeDedupHash } from '@/lib/ingestion/shared/normalize_education';
+import { scrapePitt }       from '@/lib/ingestion/education/pitt';
+import { scrapeCmu }        from '@/lib/ingestion/education/cmu';
+import { scrapeCcac }       from '@/lib/ingestion/education/ccac';
+import { scrapePghSchools } from '@/lib/ingestion/education/pgh_schools';
+import { scrapeDuquesne }   from '@/lib/ingestion/education/duquesne';
+import type { ScrapedOpportunity } from '@/lib/ingestion/shared/normalize_education';
 
 const INGEST_SECRET = process.env.INGEST_SECRET ?? '';
 const UPSERT_BATCH  = 50;

@@ -7,7 +7,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '../../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
 const USASPENDING_BASE = 'https://api.usaspending.gov';
 const PGH_PLACE_FIPS = '4261000'; // Pittsburgh city FIPS

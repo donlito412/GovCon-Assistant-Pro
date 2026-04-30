@@ -4,7 +4,7 @@ import {
   FileSearch, KanbanSquare, Bell, TrendingUp,
   ArrowRight, Clock, DollarSign, AlertTriangle,
 } from 'lucide-react';
-import { createServerSupabaseClient } from '../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
+import { createServerSupabaseClient } from '@/lib/supabase';
 
 // ============================================================
 // HOME / DASHBOARD OVERVIEW PAGE

@@ -7,8 +7,8 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
-import { createServerSupabaseClient } from '../../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/supabase';
-import { OutreachEmail } from '../../../../../../../03_OUTPUTS/TASK_015_outreach_crm/lib/email/outreach-email';
+import { createServerSupabaseClient } from '@/lib/supabase';
+import { OutreachEmail } from '@/lib/email/outreach-email';
 
 type Ctx = { params: { id: string } };
 

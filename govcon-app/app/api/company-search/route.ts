@@ -5,7 +5,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { searchCompanies } from '../../../../../03_OUTPUTS/TASK_014_company_finder/lib/search/company_search';
+import { searchCompanies } from '@/lib/search/company_search';
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   let body: any;

@@ -12,7 +12,7 @@ import type {
   ThresholdCategory,
   ContractType,
   SetAside,
-} from '../../../../../../03_OUTPUTS/TASK_001_scaffold/lib/types';
+} from '@/lib/types';
 import {
   isPittsburghAreaZip,
   isPittsburghAreaCounty,

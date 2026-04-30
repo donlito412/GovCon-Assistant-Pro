@@ -15,9 +15,9 @@ export {
   parseToIso,
   NAICS_SECTOR_MAP,
   getNaicsSector,
-} from '../../../../../03_OUTPUTS/TASK_003_state_local_ingestion/lib/ingestion/shared/normalize_shared';
+} from '@/lib/ingestion/shared/normalize_shared';
 
-import type { OpportunitySource, ContractType, ThresholdCategory, SetAside } from '../../../../../03_OUTPUTS/TASK_001_scaffold/lib/types';
+import type { OpportunitySource, ContractType, ThresholdCategory, SetAside } from '@/lib/types';
 
 // ============================================================
 // KEYWORD-BASED NAICS SECTOR INFERENCE
