@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useRouter, useSearchParams } from 'next/navigation';
 import { createClientComponentClient } from '@supabase/auth-helpers-nextjs';
 import { LogIn, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, KanbanSquare } from 'lucide-react';
@@ -13,7 +13,7 @@ import { LogIn, Mail, Lock, Eye, EyeOff, Loader2, AlertCircle, KanbanSquare } fr
 // Redirects to ?redirect= or / on success.
 // ============================================================
 
-export default function LoginPage() {
+function LoginPageInner() {
   const router = useRouter();
   const searchParams = useSearchParams();
   const redirectTo = searchParams.get('redirect') ?? '/';
@@ -144,5 +144,13 @@ export default function LoginPage() {
         </p>
       </div>
     </div>
+  );
+}
+
+export default function LoginPage() {
+  return (
+    <Suspense fallback={null}>
+      <LoginPageInner />
+    </Suspense>
   );
 }

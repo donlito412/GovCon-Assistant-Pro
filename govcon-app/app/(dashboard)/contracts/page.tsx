@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { LayoutGrid, List, Loader2, FileSearch, ChevronLeft, ChevronRight } from 'lucide-react';
 import { SearchBar } from '@/components/contracts/SearchBar';
@@ -97,7 +97,7 @@ function EmptyState() {
   );
 }
 
-export default function ContractsPage() {
+function ContractsPageInner() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const searchParams = useSearchParams();
   const page = parseInt(searchParams.get('page') ?? '1', 10);
@@ -231,5 +231,13 @@ export default function ContractsPage() {
         </div>
       </div>
     </div>
+  );
+}
+
+export default function ContractsPage() {
+  return (
+    <Suspense fallback={null}>
+      <ContractsPageInner />
+    </Suspense>
   );
 }

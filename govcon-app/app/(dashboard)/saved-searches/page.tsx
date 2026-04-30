@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 
-import React, { useState } from 'react';
+import React, { useState, Suspense } from 'react';
 import Link from 'next/link';
 import { Bell, Plus, Loader2, AlertCircle, Search } from 'lucide-react';
 import { SavedSearchCard } from '@/components/saved-searches/SavedSearchCard';
@@ -16,7 +16,7 @@ import { useSavedSearches } from '@/lib/api/saved-searches';
 // alert toggles, and delete actions.
 // ============================================================
 
-export default function SavedSearchesPage() {
+function SavedSearchesPageInner() {
   const { searches, isLoading, error, mutate } = useSavedSearches();
   const [modalOpen, setModalOpen] = useState(false);
 
@@ -135,5 +135,13 @@ export default function SavedSearchesPage() {
         onSaved={() => { mutate(); setModalOpen(false); }}
       />
     </div>
+  );
+}
+
+export default function SavedSearchesPage() {
+  return (
+    <Suspense fallback={null}>
+      <SavedSearchesPageInner />
+    </Suspense>
   );
 }

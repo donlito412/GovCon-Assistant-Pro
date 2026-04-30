@@ -3,7 +3,7 @@
 export const dynamic = 'force-dynamic';
 
 
-import React, { useState, useEffect, useCallback } from 'react';
+import React, { useState, useEffect, useCallback, Suspense } from 'react';
 import { useSearchParams } from 'next/navigation';
 import {
   Bot, Plus, MessageSquare, Loader2, ChevronLeft, ChevronRight, Trash2,
@@ -23,7 +23,7 @@ interface ConversationMeta {
   context?: AssistantContext;
 }
 
-export default function AssistantPage() {
+function AssistantPageInner() {
   const searchParams = useSearchParams();
   const contractId    = searchParams.get('contract_id');
   const contractTitle = searchParams.get('contract_title');
@@ -176,5 +176,13 @@ export default function AssistantPage() {
         )}
       </div>
     </div>
+  );
+}
+
+export default function AssistantPage() {
+  return (
+    <Suspense fallback={null}>
+      <AssistantPageInner />
+    </Suspense>
   );
 }
