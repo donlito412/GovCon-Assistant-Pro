@@ -1,6 +1,6 @@
 TASK ID: 005
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the Pipeline / Opportunity Tracking Board — a Kanban-style board where Jon can drag opportunities through stages from discovery to award. This is the core workflow tool for managing bids.

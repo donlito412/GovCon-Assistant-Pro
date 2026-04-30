@@ -1,9 +1,9 @@
 TASK ID: 014
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
-Build the Subcontractor Directory — a searchable database of Pittsburgh-area contractors and vendors that Jon can search when building a team for a specific bid. Search by NAICS code, certification type, location, and capability. Data pulled from SAM.gov Entity API, SBA DSBS, and local MWBE directories.
+Build the On-Demand Company Finder — an AI-powered search that finds any company (subcontractor, supplier, or teaming partner) when Jon needs one for a specific bid. Not a standing directory with weekly cron jobs. Jon asks the AI, the AI finds companies from any source (registered or not), presents results with approval before any action is taken. Companies Jon interacts with are saved to a lightweight contact book for future use.
 
 ASSIGNED TO: Claude
 
@@ -11,98 +11,134 @@ INPUTS:
 - /01_BRIEF/project.md
 - /05_ASSETS/data_sources.md
 - /03_OUTPUTS/TASK_001_scaffold/lib/types.ts
-- /03_OUTPUTS/TASK_005_pipeline/ (for "Find Subs" button on pipeline card)
+- /03_OUTPUTS/TASK_005_pipeline/ (for "Find Team Members" button on pipeline card)
+- /03_OUTPUTS/TASK_015_outreach_crm/ (outreach CRM — contact book integration)
 
 OUTPUT:
-/03_OUTPUTS/TASK_014_subcontractors/
-  - supabase_subcontractors_schema.sql — subcontractors table schema
-  - /lib/ingestion/subs/samgov_entities.ts — SAM.gov Entity API client (search by NAICS + PA)
-  - /lib/ingestion/subs/sba_dsbs.ts — SBA Dynamic Small Business Search scraper
-  - /lib/ingestion/subs/phfa_mwbe.ts — Pennsylvania PHFA MWBE directory scraper
-  - /lib/ingestion/subs/allegheny_mwdbe.ts — Allegheny County MWDBE directory scraper
-  - /app/api/ingest/subcontractors/route.ts — unified sub ingestion endpoint
-  - /app/(dashboard)/subcontractors/page.tsx — subcontractor directory page
-  - /app/(dashboard)/subcontractors/[id]/page.tsx — subcontractor profile page
-  - /components/subcontractors/SubCard.tsx — subcontractor listing card
-  - /components/subcontractors/SubFilterPanel.tsx — filter by NAICS, cert, location
-  - /components/subcontractors/SubProfileHeader.tsx — company profile header
-  - /components/subcontractors/SubAwardHistory.tsx — past federal awards (USASpending)
-  - /components/subcontractors/SubCertBadges.tsx — certification badges (8a, HUBZone, WOSB, SDVOSB, MWBE)
-  - /components/subcontractors/FindSubsForContract.tsx — "Find Subs for This Contract" panel
-  - /lib/api/subcontractors.ts — subcontractor data hooks
-  - /app/api/subcontractors/route.ts — subcontractor search endpoint
-  - /app/api/subcontractors/[id]/route.ts — subcontractor profile + awards
-  - netlify.toml (updated: add subs ingest cron — weekly, Sunday 02:00 ET)
+/03_OUTPUTS/TASK_014_company_finder/
+  - supabase_contacts_schema.sql — contacts table (companies Jon has found/saved/worked with)
+  - /lib/search/company_search.ts — unified company search: queries SAM.gov Entity API + Google Places API + web search
+  - /lib/search/samgov_entities.ts — SAM.gov Entity API client (for government-registered companies)
+  - /lib/search/google_places.ts — Google Places API client (finds any local business by type/keyword)
+  - /app/api/company-search/route.ts — POST endpoint: takes { query, naics, location, registered_only } → returns ranked results
+  - /app/api/contacts/route.ts — GET list / POST save contact
+  - /app/api/contacts/[id]/route.ts — GET / PATCH / DELETE saved contact
+  - /app/(dashboard)/contacts/page.tsx — saved contacts / contact book page
+  - /components/company-finder/CompanySearchResult.tsx — result card: name, type, location, source, certifications if registered, "Save Contact" + "Add to Bid Team" buttons (approval required)
+  - /components/company-finder/CompanySearchPanel.tsx — search panel embedded in pipeline card + standalone page
+  - /components/contacts/ContactCard.tsx — saved contact card (name, company, status, linked bids)
+  - /lib/api/company-search.ts — client-side hooks
 
-DATABASE SCHEMA — subcontractors table:
-- id, uei (SAM.gov Unique Entity ID), cage_code
-- legal_name, dba_name
-- address, city, state, zip, phone, website, email
-- naics_codes (JSONB array of NAICS codes they're registered for)
-- primary_naics
-- certifications (JSONB: { sdvosb, vosb, wosb, edwosb, hubzone, sba_8a, mwbe, dbe })
-- business_types (JSONB array: small_business, veteran_owned, etc.)
-- employee_count, annual_revenue_range
-- registration_status (active/inactive/expired)
-- registration_expiry
-- capabilities_statement (text — from SAM profile)
-- sources (JSONB array: samgov, sba_dsbs, phfa_mwbe, allegheny_mwdbe)
-- last_award_date, total_awards_value (populated from USASpending)
+---
+
+## MODEL: ON-DEMAND SEARCH, NOT A STANDING DIRECTORY
+
+Old model (removed): Weekly cron pulls all PA-registered entities into a database. Jon browses a directory.
+
+New model: Jon is working on a bid. He asks the AI (or clicks "Find Team Members" on a pipeline card):
+  - "Find me a janitorial supply company in Pittsburgh"
+  - "Find an 8(a) certified IT subcontractor for this NAICS 541512 contract"
+  - "Who supplies construction materials in Allegheny County?"
+
+The platform searches live across all sources, returns results, Jon approves which ones to save or contact. Nothing is pre-loaded. Everything is on-demand.
+
+---
+
+## SEARCH SOURCES (queried live, in priority order)
+
+1. SAM.gov Entity API (https://open.gsa.gov/api/entity-api/)
+   - Use when: government certification matters (set-aside requirements, 8(a), HUBZone, SDVOSB, etc.)
+   - Params: naicsCode, physicalAddressStateCode=PA, keyword
+   - Returns: UEI, name, address, NAICS codes, certifications, POC contact
+   - Auth: SAMGOV_API_KEY (Jon already has)
+
+2. Google Places API (https://developers.google.com/maps/documentation/places/web-service)
+   - Use when: finding any local business regardless of government registration
+   - Params: keyword (e.g. "janitorial supplies", "IT staffing", "concrete contractor"), location=Pittsburgh PA, radius=50mi
+   - Returns: business name, address, phone, website, category, rating
+   - Auth: GOOGLE_PLACES_API_KEY
+   - This finds companies that are NOT SAM registered — they need Jon, Jon needs them
+
+3. Web Search (Brave Search API or similar)
+   - Use when: specialized supplier or niche company not in Places
+   - Returns: business name, website, description from web
+   - Auth: BRAVE_SEARCH_API_KEY (or equivalent)
+
+---
+
+## DATABASE SCHEMA — contacts table (lightweight contact book)
+
+Saves companies Jon has found, interacted with, or wants to remember:
+- id
+- company_name (TEXT NOT NULL)
+- contact_name (TEXT)
+- email (TEXT)
+- phone (TEXT)
+- website (TEXT)
+- address, city, state, zip
+- source (TEXT: 'samgov' | 'google_places' | 'web_search' | 'manual')
+- uei (TEXT nullable — if SAM registered)
+- naics_codes (JSONB array)
+- certifications (JSONB nullable — if government registered)
+- sam_registered (BOOLEAN DEFAULT FALSE)
+- notes (TEXT — Jon's notes)
+- linked_bid_ids (JSONB array — which bids this contact is associated with)
+- status (TEXT: 'saved' | 'contacted' | 'teaming' | 'declined')
 - created_at, updated_at
 
-DATA SOURCES:
-1. SAM.gov Entity Management API (https://open.gsa.gov/api/entity-api/)
-   - Endpoint: GET https://api.sam.gov/entity-information/v3/entities
-   - Params: naicsCode, physicalAddressStateCode=PA, physicalAddressCity=Pittsburgh (+ surrounding)
-   - Returns: UEI, legal name, address, NAICS codes, certifications, POC contact info
-   - Auth: same SAM.gov API key (Jon already has)
-   - Run weekly (entity data doesn't change daily)
+---
 
-2. SBA DSBS (https://dsbs.sba.gov/)
-   - Scrape search results filtered to PA + Pittsburgh area
-   - Supplement SAM.gov data with capabilities statements and marketing descriptions
-   - Deduplicate against SAM.gov records by UEI
+## STEPS
 
-3. PHFA MWBE Directory (https://mwbe.phfa.org/directory/search.aspx)
-   - Scrape PA Housing Finance Agency's searchable MWBE directory
-   - Add MWBE certification flag to matching SAM.gov records
+1. Build SAM.gov Entity API client (live search, not batch ingest)
+   - Search by NAICS + PA + Pittsburgh area zips
+   - Return top 20 results per search
 
-4. Allegheny County MWDBE (mwdbe@alleghenycounty.us — contact page)
-   - Scrape county-certified minority/women/disadvantaged business list
-   - Tag records with allegheny_mwdbe = true
+2. Build Google Places API client
+   - Search by keyword + "Pittsburgh PA" location
+   - Return name, address, phone, website, category
+   - Flag as sam_registered = false
 
-STEPS:
-1. Create subcontractors table in Supabase
-2. Build SAM.gov Entity API client:
-   - Paginate through all active entities in PA with Pittsburgh-area zips
-   - Extract: UEI, CAGE, name, address, NAICS codes, certifications, POC name/email/phone
-3. Build SBA DSBS scraper — supplement capabilities statements
-4. Build PHFA MWBE scraper — add MWBE cert flags
-5. Build Allegheny County MWDBE scraper — add local MWDBE flags
-6. Build /api/subcontractors search endpoint:
-   - Filter by: naics_code (match against JSONB array), certification type, city/zip, registration_status=active
-   - Sort by: total_awards_value (most experienced first), alphabetical, registration_expiry
-7. Subcontractor Directory page:
-   - Search bar (company name or capability keyword)
-   - Filter panel: NAICS code(s), certifications, Pittsburgh-area only toggle, active only toggle
-   - SubCard: company name, primary NAICS, cert badges, city, total federal awards value, "View Profile" + "Contact" buttons
-8. Subcontractor Profile page:
-   - Company info, all NAICS codes, all certifications, contact info
-   - Award history from USASpending (last 10 awards: agency, amount, date, description)
-   - "Add to Bid Team" button (links to pipeline — see TASK_015)
-   - "Send Outreach Email" button (links to TASK_015 outreach CRM)
-9. "Find Subs for This Contract" panel on Pipeline cards (TASK_005 integration):
-   - Auto-suggest subcontractors whose NAICS codes match the contract's NAICS code
-   - Filter to Pittsburgh area, active registration, sorted by award history
-   - One-click "Add to Bid Team"
+3. Build web search fallback (Brave Search or similar)
+   - For niche searches not covered by Places
 
-CONSTRAINTS:
-- SAM.gov Entity API uses same API key as Opportunities API
-- Only pull active registrations (registrationStatus=Active)
-- UEI is the primary deduplication key across all sources
-- Contact info (email, phone) displayed only — never auto-sent without user action
-- Weekly refresh is sufficient (entity data stable)
-- Award history fetched from USASpending on-demand (profile page load), not stored
+4. Build unified /api/company-search endpoint:
+   - Accepts: { query, naics, location, require_certified, certification_type }
+   - Queries all three sources in parallel
+   - Merges + deduplicates results (match on name + address)
+   - Returns ranked list: SAM-registered first if certification required, otherwise by relevance
+
+5. Build CompanySearchPanel component:
+   - Embedded in Pipeline card ("Find Team Members" button)
+   - Standalone page at /contacts/search
+   - Shows results as CompanySearchResult cards
+   - Every action (Save Contact, Add to Bid Team, Send Outreach) requires Jon's approval before executing
+
+6. Build Contacts page (/contacts):
+   - Lists all saved contacts
+   - Filter by: status, certification, linked bid, source (SAM vs non-SAM)
+   - Links to Outreach CRM (TASK_015) for email history
+
+---
+
+## APPROVAL-BASED ACTIONS
+
+Every action requires Jon's explicit approval before executing:
+- "Save this contact" → shows contact card preview → Jon clicks Confirm Save
+- "Add to Bid Team" → shows team assignment form → Jon clicks Confirm Add
+- "Send outreach email" → shows drafted email → Jon clicks Confirm Send
+- No company is saved, contacted, or added to a bid without Jon approving first
+
+---
+
+## CONSTRAINTS
+- Google Places API key required (GOOGLE_PLACES_API_KEY env var)
+- SAM.gov API key required (SAMGOV_API_KEY — already in use for TASK_002)
+- Brave Search (or equivalent) API key required (SEARCH_API_KEY env var)
+- No pre-loaded or cached company database — all searches are live
+- Contact book only stores companies Jon explicitly saves
+- Contact info never auto-shared or auto-emailed — always Jon's approval first
+- Non-SAM companies displayed clearly labeled "Not SAM Registered" — Jon knows upfront
 
 AFTER COMPLETION:
 - Update /04_LOGS/project_log.md

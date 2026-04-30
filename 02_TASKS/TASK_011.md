@@ -1,6 +1,6 @@
 TASK ID: 011
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build scrapers for educational institution procurement portals in the Pittsburgh area: University of Pittsburgh, Carnegie Mellon University, CCAC, Pittsburgh Public Schools, and Duquesne University. Normalize and store their RFPs/bids alongside government contracts in Supabase.

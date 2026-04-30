@@ -1,6 +1,6 @@
 TASK ID: 015
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the Outreach CRM and Bid Tracker — two tightly integrated tools. The Outreach CRM lets Jon contact subcontractors directly from the platform and tracks every conversation. The Bid Tracker creates a permanent record of every bid submitted: amount, team, documents, result, and who won if Jon lost.

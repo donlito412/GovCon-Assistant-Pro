@@ -1,6 +1,6 @@
 TASK ID: 004
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the core contract discovery UI — the main page of the application. A searchable, filterable, sortable list of all Pittsburgh-area contracts from all sources. This is the heart of the product.

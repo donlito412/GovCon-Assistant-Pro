@@ -1,6 +1,6 @@
 TASK ID: 006
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the Saved Searches and Alerts system. Jon can save any filter combination as a named search, and the system emails him when new matching contracts are posted.

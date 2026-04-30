@@ -1,6 +1,6 @@
 TASK ID: 008
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the Analytics Dashboard — spending trends, contract volume by source, deadline radar, and pipeline performance stats. Gives Jon a real-time market intelligence view of the Pittsburgh government contracting landscape.

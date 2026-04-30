@@ -1,6 +1,6 @@
 TASK ID: 007
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build Agency Profile pages — detailed intelligence pages for each agency posting Pittsburgh-area contracts. Shows spending history, active contracts, top NAICS codes, and key contacts.

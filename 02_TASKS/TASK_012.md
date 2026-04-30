@@ -1,6 +1,6 @@
 TASK ID: 012
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build the Grants module. Pull federal grants from Grants.gov API, PA state grants, URA programs, Allegheny County grants, and SBA opportunities. Display in a dedicated Grants section separate from contracts, with its own filters for eligibility, amount, and deadline.

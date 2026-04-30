@@ -1,6 +1,6 @@
 TASK ID: 009
 
-STATUS: PENDING
+STATUS: DONE
 
 GOAL:
 Build authentication and user settings. Lock the app behind Supabase Auth (email/password) so only Jon can access it. Add a settings page for profile, notification preferences, and API key management.

@@ -23,25 +23,29 @@
 
 # Educational institution contracts —
 # Pitt, CMU, CCAC, PGH Schools, Duquesne (TASK_011)
+# 12:30 UTC = 07:30 ET (EST) — runs after state/local (12:00 UTC)
 [functions."ingest-education"]
-  schedule = "30 7 * * *"
+  schedule = "30 12 * * *"
 
 # Grants — Grants.gov, PA DCED, URA, SBA (TASK_012)
+# 12:45 UTC = 07:45 ET (EST) — runs after education (12:30 UTC)
 [functions."ingest-grants"]
-  schedule = "45 7 * * *"
+  schedule = "45 12 * * *"
 
 # Events + meetings — City Council, Planning, URA,
 # Allegheny County, Eventbrite, PGH Business Collective (TASK_013)
+# 13:00 UTC = 08:00 ET (EST) — runs after grants (12:45 UTC)
 [functions."ingest-events"]
-  schedule = "0 8 * * *"
+  schedule = "0 13 * * *"
 
 # Forecast opportunities — SAM.gov forecasts (TASK_018)
 [functions."ingest-forecasts"]
   schedule = "30 6 * * *"
 
 # Alert emails — runs after all ingestion is complete (TASK_006)
+# 13:30 UTC = 08:30 ET (EST) — after events (13:00 UTC)
 [functions."run-alerts"]
-  schedule = "0 9 * * *"
+  schedule = "30 13 * * *"
 
 # Subcontractor directory refresh — SAM.gov Entity API,
 # SBA DSBS, PHFA MWBE, Allegheny MWDBE (TASK_014)
