@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import {
   useRecompetes, type RecompeteFilters, type IncumbentContract,
-} from '../../../lib/api/recompetes';
-import { RecompeteCard } from '../../../components/recompetes/RecompeteCard';
+} from '@/lib/api/recompetes';
+import { RecompeteCard } from '@/components/recompetes/RecompeteCard';
 
 // ============================================================
 // RECOMPETE RADAR PAGE — /recompetes

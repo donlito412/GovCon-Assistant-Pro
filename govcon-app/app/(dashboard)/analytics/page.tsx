@@ -5,14 +5,14 @@ import {
   BarChart3, TrendingUp, DollarSign, Clock, Target,
   AlertTriangle, Award, RefreshCw, Loader2, AlertCircle,
 } from 'lucide-react';
-import { StatCard } from '../../../components/analytics/StatCard';
-import { ContractsBySourceChart } from '../../../components/analytics/ContractsBySourceChart';
-import { ContractVolumeChart } from '../../../components/analytics/ContractVolumeChart';
-import { SpendingByNaicsChart } from '../../../components/analytics/SpendingByNaicsChart';
-import { DeadlineRadar } from '../../../components/analytics/DeadlineRadar';
-import { PipelineValueChart } from '../../../components/analytics/PipelineValueChart';
-import { TopAgenciesTable } from '../../../components/analytics/TopAgenciesTable';
-import { useAnalytics, fmt } from '../../../lib/api/analytics';
+import { StatCard } from '@/components/analytics/StatCard';
+import { ContractsBySourceChart } from '@/components/analytics/ContractsBySourceChart';
+import { ContractVolumeChart } from '@/components/analytics/ContractVolumeChart';
+import { SpendingByNaicsChart } from '@/components/analytics/SpendingByNaicsChart';
+import { DeadlineRadar } from '@/components/analytics/DeadlineRadar';
+import { PipelineValueChart } from '@/components/analytics/PipelineValueChart';
+import { TopAgenciesTable } from '@/components/analytics/TopAgenciesTable';
+import { useAnalytics, fmt } from '@/lib/api/analytics';
 
 // ============================================================
 // ANALYTICS DASHBOARD PAGE — /analytics

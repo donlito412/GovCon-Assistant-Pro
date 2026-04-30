@@ -5,8 +5,8 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestSamGovForecasts } from '../../../../lib/ingestion/forecasts/samgov_forecasts';
-import { ingestIncumbents } from '../../../../lib/ingestion/incumbents/fpds_lookup';
+import { ingestSamGovForecasts } from '@/lib/ingestion/forecasts/samgov_forecasts';
+import { ingestIncumbents } from '@/lib/ingestion/incumbents/fpds_lookup';
 
 export const maxDuration = 300;
 

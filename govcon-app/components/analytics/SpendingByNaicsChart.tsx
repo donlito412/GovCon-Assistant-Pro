@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts';
-import { fmt, type NaicsStat } from '../../lib/api/analytics';
+import { fmt, type NaicsStat } from '@/lib/api/analytics';
 
 // ============================================================
 // SPENDING BY NAICS — Horizontal bar chart, top 10 by $ value

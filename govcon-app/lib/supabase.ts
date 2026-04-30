@@ -1,5 +1,4 @@
 import { createClient } from '@supabase/supabase-js';
-import { Database } from './types_db'; // Assuming a generated types file from Supabase CLI
 
 // Ensure environment variables are present
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL || '';

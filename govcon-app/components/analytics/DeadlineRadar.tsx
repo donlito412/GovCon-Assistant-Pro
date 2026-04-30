@@ -3,7 +3,7 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Clock, AlertTriangle, DollarSign } from 'lucide-react';
-import { fmt, type DeadlineBuckets, type DeadlineItem } from '../../lib/api/analytics';
+import { fmt, type DeadlineBuckets, type DeadlineItem } from '@/lib/api/analytics';
 
 // ============================================================
 // DEADLINE RADAR — Timeline of upcoming deadlines (next 90 days)

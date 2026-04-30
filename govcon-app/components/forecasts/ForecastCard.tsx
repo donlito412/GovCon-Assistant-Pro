@@ -9,7 +9,7 @@ import {
 import {
   daysUntilSolicitation, formatForecastValue, solicitationLabel, statusColor,
   type ForecastOpportunity,
-} from '../../lib/api/forecasts';
+} from '@/lib/api/forecasts';
 
 // ============================================================
 // FORECAST CARD — pre-solicitation forecast opportunity

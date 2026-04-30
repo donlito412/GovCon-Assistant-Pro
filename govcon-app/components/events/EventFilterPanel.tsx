@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import type { EventFilters } from '../../lib/api/events';
+import type { EventFilters } from '@/lib/api/events';
 
 // ============================================================
 // EVENT FILTER PANEL — sidebar filter controls

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Loader2, FileCheck } from 'lucide-react';
-import { createBid, type BidRecord, type TeamMember } from '../../lib/api/bids';
+import { createBid, type BidRecord, type TeamMember } from '@/lib/api/bids';
 import { BidTeamBuilder } from './BidTeamBuilder';
 
 // ============================================================

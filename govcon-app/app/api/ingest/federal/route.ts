@@ -13,8 +13,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { fetchAllPAOpportunities } from '../../../../lib/ingestion/samgov';
-import { normalizePittsburghOpportunities, type NormalizedOpportunity } from '../../../../lib/ingestion/normalize';
+import { fetchAllPAOpportunities } from '@/lib/ingestion/samgov';
+import { normalizePittsburghOpportunities, type NormalizedOpportunity } from '@/lib/ingestion/normalize';
 
 const UPSERT_BATCH_SIZE = 50;
 

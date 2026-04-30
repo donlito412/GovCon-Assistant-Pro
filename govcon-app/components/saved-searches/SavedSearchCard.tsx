@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import Link from 'next/link';
 import { Trash2, ExternalLink, Clock, Search } from 'lucide-react';
 import { AlertPreferences } from './AlertPreferences';
-import { deleteSavedSearch, filterSummary, filtersToQueryString, type SavedSearch } from '../../lib/api/saved-searches';
+import { deleteSavedSearch, filterSummary, filtersToQueryString, type SavedSearch } from '@/lib/api/saved-searches';
 
 // ============================================================
 // SAVED SEARCH CARD

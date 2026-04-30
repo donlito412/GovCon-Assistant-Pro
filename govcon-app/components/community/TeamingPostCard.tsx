@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Calendar, Building2, Tag, Handshake, CheckCircle, Loader2 } from 'lucide-react';
-import { sendMessage, closeTeamingPost, type TeamingPost } from '../../lib/api/community';
+import { sendMessage, closeTeamingPost, type TeamingPost } from '@/lib/api/community';
 
 // ============================================================
 // TEAMING POST CARD — teaming board listing

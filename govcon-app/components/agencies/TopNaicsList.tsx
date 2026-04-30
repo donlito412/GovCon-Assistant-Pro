@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer,
 } from 'recharts';
-import { formatDollars, type NaicsStat } from '../../lib/api/agencies';
+import { formatDollars, type NaicsStat } from '@/lib/api/agencies';
 
 // ============================================================
 // TOP NAICS LIST

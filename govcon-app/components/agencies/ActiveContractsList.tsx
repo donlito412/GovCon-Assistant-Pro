@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { ExternalLink, Clock, DollarSign } from 'lucide-react';
-import { formatDollars, type ActiveOpportunity } from '../../lib/api/agencies';
+import { formatDollars, type ActiveOpportunity } from '@/lib/api/agencies';
 
 // ============================================================
 // ACTIVE CONTRACTS LIST

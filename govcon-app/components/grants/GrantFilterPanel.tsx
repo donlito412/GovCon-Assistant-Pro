@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { X } from 'lucide-react';
-import type { GrantFilters } from '../../lib/api/grants';
+import type { GrantFilters } from '@/lib/api/grants';
 
 // ============================================================
 // GRANT FILTER PANEL — sidebar filter controls

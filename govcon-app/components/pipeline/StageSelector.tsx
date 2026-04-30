@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronDown, Loader2 } from 'lucide-react';
-import { PIPELINE_STAGES, STAGE_LABELS, STAGE_COLORS, moveStage, type PipelineStage } from '../../lib/api/pipeline';
+import { PIPELINE_STAGES, STAGE_LABELS, STAGE_COLORS, moveStage, type PipelineStage } from '@/lib/api/pipeline';
 
 // ============================================================
 // STAGE SELECTOR

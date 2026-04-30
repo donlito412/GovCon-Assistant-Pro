@@ -3,7 +3,7 @@
 import React from 'react';
 import { FileText, Database, Globe, Building2, X, ChevronRight } from 'lucide-react';
 import Link from 'next/link';
-import type { AssistantContext } from '../../lib/ai/prompts';
+import type { AssistantContext } from '@/lib/ai/prompts';
 
 // ============================================================
 // CONTEXT PANEL — shows what data the AI is referencing

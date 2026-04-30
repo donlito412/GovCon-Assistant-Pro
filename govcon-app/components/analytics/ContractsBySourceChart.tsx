@@ -4,7 +4,7 @@ import React from 'react';
 import {
   PieChart, Pie, Cell, Tooltip, Legend, ResponsiveContainer,
 } from 'recharts';
-import type { SourceBreakdown } from '../../lib/api/analytics';
+import type { SourceBreakdown } from '@/lib/api/analytics';
 
 // ============================================================
 // CONTRACTS BY SOURCE — Donut chart (Federal / State / Local / Education)

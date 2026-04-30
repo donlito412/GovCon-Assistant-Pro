@@ -3,7 +3,7 @@
 import React, { useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { ArrowUpDown } from 'lucide-react';
-import { updateSearchParam } from '../../lib/api/contracts';
+import { updateSearchParam } from '@/lib/api/contracts';
 
 // ============================================================
 // SORT CONTROLS

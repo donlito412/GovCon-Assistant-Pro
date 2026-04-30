@@ -4,9 +4,9 @@ import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
 import useSWR from 'swr';
 import { Loader2, UserCircle2, AlertCircle, Bell } from 'lucide-react';
-import { ProfileSetupForm } from '../../../components/community/ProfileSetupForm';
-import { ConnectionRequestRespond } from '../../../components/community/ConnectionRequest';
-import { useConnections, type CommunityProfile, type ConnectionRequest } from '../../../lib/api/community';
+import { ProfileSetupForm } from '@/components/community/ProfileSetupForm';
+import { ConnectionRequestRespond } from '@/components/community/ConnectionRequest';
+import { useConnections, type CommunityProfile, type ConnectionRequest } from '@/lib/api/community';
 
 // ============================================================
 // MY COMMUNITY PROFILE PAGE — /community/my-profile

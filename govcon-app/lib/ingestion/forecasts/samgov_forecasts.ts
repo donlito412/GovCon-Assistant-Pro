@@ -165,7 +165,7 @@ export async function ingestSamGovForecasts(maxPages: number = 10): Promise<Fore
   return { ingested, updated, errors };
 }
 
-async function linkForecastsToOpportunities(db: ReturnType<typeof createClient>) {
+async function linkForecastsToOpportunities(db: any) {
   // Find forecasts whose status changed to 'solicited' — where a matching live opportunity exists
   const { data: forecasts } = await db
     .from('forecast_opportunities')

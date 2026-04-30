@@ -6,7 +6,7 @@ import { Building2, ExternalLink, FileSearch, DollarSign, TrendingUp, BarChart3 
 import {
   LEVEL_LABELS, LEVEL_COLORS, formatDollars,
   type Agency, type AgencyStats, type AgencyLevel,
-} from '../../lib/api/agencies';
+} from '@/lib/api/agencies';
 
 // ============================================================
 // AGENCY HEADER

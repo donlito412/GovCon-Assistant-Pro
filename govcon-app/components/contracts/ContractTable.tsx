@@ -5,7 +5,7 @@ import Link from 'next/link';
 import { ExternalLink, PlusCircle } from 'lucide-react';
 import { Badge, sourceBadgeVariant, sourceLabel, contractTypeBadgeVariant, thresholdBadgeVariant, thresholdLabel } from '../ui/Badge';
 import { DeadlineChip } from '../ui/DeadlineChip';
-import { formatValue, type ContractListItem } from '../../lib/api/contracts';
+import { formatValue, type ContractListItem } from '@/lib/api/contracts';
 
 // ============================================================
 // CONTRACT TABLE

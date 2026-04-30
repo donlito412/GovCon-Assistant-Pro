@@ -7,7 +7,7 @@ import { OutreachStatusBadge } from './OutreachStatusBadge';
 import {
   needsFollowUp, STATUS_LABELS,
   type OutreachContact, type OutreachStatus,
-} from '../../lib/api/outreach';
+} from '@/lib/api/outreach';
 
 // ============================================================
 // OUTREACH CONTACT CARD

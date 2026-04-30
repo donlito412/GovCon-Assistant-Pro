@@ -5,7 +5,7 @@ import {
   Building2, MapPin, Phone, Globe, CheckCircle2, AlertTriangle,
   Star, UserPlus, Bookmark, ChevronDown, ChevronUp, X, Check,
 } from 'lucide-react';
-import { activeCerts, CERT_LABELS, SOURCE_LABELS, saveContact, type CompanyResult } from '../../lib/api/company-search';
+import { activeCerts, CERT_LABELS, SOURCE_LABELS, saveContact, type CompanyResult } from '@/lib/api/company-search';
 
 // ============================================================
 // COMPANY SEARCH RESULT CARD

@@ -9,12 +9,12 @@
 //   npx ts-node scripts/test_education_scrapers.ts --source pitt
 // ============================================================
 
-import { scrapePitt }       from '../lib/ingestion/education/pitt';
-import { scrapeCmu }        from '../lib/ingestion/education/cmu';
-import { scrapeCcac }       from '../lib/ingestion/education/ccac';
-import { scrapePghSchools } from '../lib/ingestion/education/pgh_schools';
-import { scrapeDuquesne }   from '../lib/ingestion/education/duquesne';
-import { computeDedupHash } from '../lib/ingestion/shared/normalize_education';
+import { scrapePitt }       from '@/lib/ingestion/education/pitt';
+import { scrapeCmu }        from '@/lib/ingestion/education/cmu';
+import { scrapeCcac }       from '@/lib/ingestion/education/ccac';
+import { scrapePghSchools } from '@/lib/ingestion/education/pgh_schools';
+import { scrapeDuquesne }   from '@/lib/ingestion/education/duquesne';
+import { computeDedupHash } from '@/lib/ingestion/shared/normalize_education';
 
 const SCRAPERS = [
   { key: 'pitt',        label: 'University of Pittsburgh',        fn: scrapePitt },

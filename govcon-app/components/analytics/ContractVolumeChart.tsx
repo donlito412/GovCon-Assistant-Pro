@@ -5,7 +5,7 @@ import {
   LineChart, Line, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, ReferenceLine,
 } from 'recharts';
-import type { WeeklyVolume } from '../../lib/api/analytics';
+import type { WeeklyVolume } from '@/lib/api/analytics';
 
 // ============================================================
 // CONTRACT VOLUME OVER TIME — Line chart, new per week (12 weeks)

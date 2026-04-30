@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Loader2, Handshake, Plus, X } from 'lucide-react';
-import { createTeamingPost, type TeamingPost } from '../../lib/api/community';
+import { createTeamingPost, type TeamingPost } from '@/lib/api/community';
 
 // ============================================================
 // POST TEAMING REQUEST FORM

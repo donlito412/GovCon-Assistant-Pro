@@ -21,9 +21,9 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
-import { fetchAllPAOpportunities } from '../lib/ingestion/samgov';
-import { normalizePittsburghOpportunities, computeDedupHash, deriveThresholdCategory, mapContractType } from '../lib/ingestion/normalize';
-import { isPittsburghAreaZip, isPittsburghAreaCounty } from '../lib/geo/pittsburgh_zips';
+import { fetchAllPAOpportunities } from '@/lib/ingestion/samgov';
+import { normalizePittsburghOpportunities, computeDedupHash, deriveThresholdCategory, mapContractType } from '@/lib/ingestion/normalize';
+import { isPittsburghAreaZip, isPittsburghAreaCounty } from '@/lib/geo/pittsburgh_zips';
 
 const SAMGOV_API_KEY = process.env.SAMGOV_API_KEY ?? '';
 

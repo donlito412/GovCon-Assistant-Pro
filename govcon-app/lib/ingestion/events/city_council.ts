@@ -37,7 +37,7 @@ function parseTime(raw: string | undefined): string | undefined {
   return `${String(h).padStart(2, '0')}:${m}`;
 }
 
-function detectAgendaUrl($el: cheerio.Cheerio<cheerio.AnyNode>, baseUrl: string): string | undefined {
+function detectAgendaUrl($el: cheerio.Cheerio<any>, baseUrl: string): string | undefined {
   const agendaLink = $el.find('a').filter((_, a) => /agenda|minutes/i.test(cheerio.load(a)('a').text())).first();
   const href = agendaLink.attr('href');
   return href ? (href.startsWith('http') ? href : `${baseUrl}${href}`) : undefined;

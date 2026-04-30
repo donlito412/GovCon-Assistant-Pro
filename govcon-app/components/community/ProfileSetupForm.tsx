@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Loader2, UserCircle2, Plus, X } from 'lucide-react';
-import { createCommunityProfile, updateCommunityProfile, type CommunityProfile } from '../../lib/api/community';
+import { createCommunityProfile, updateCommunityProfile, type CommunityProfile } from '@/lib/api/community';
 
 // ============================================================
 // PROFILE SETUP FORM — create or edit community profile

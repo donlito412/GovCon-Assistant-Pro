@@ -9,7 +9,7 @@ import {
   STAGE_COLORS,
   type PipelineItem,
   type PipelineStage,
-} from '../../lib/api/pipeline';
+} from '@/lib/api/pipeline';
 
 // ============================================================
 // PIPELINE CARD

@@ -3,7 +3,7 @@
 import React, { useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
-import { updateSearchParam } from '../../lib/api/contracts';
+import { updateSearchParam } from '@/lib/api/contracts';
 
 // ============================================================
 // FILTER PANEL

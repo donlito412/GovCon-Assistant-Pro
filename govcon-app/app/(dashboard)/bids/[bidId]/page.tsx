@@ -3,8 +3,8 @@
 import React from 'react';
 import { useParams, useRouter } from 'next/navigation';
 import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
-import { useBid, type BidRecord } from '../../../lib/api/bids';
-import { BidDetailPanel } from '../../../components/bids/BidDetailPanel';
+import { useBid, type BidRecord } from '@/lib/api/bids';
+import { BidDetailPanel } from '@/components/bids/BidDetailPanel';
 
 // ============================================================
 // BID DETAIL PAGE — /bids/[bidId]

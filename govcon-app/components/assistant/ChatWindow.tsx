@@ -5,8 +5,8 @@ import { MessageBubble } from './MessageBubble';
 import { ChatInput } from './ChatInput';
 import { ContextPanel } from './ContextPanel';
 import { QuickPrompts } from './QuickPrompts';
-import type { ChatMessage } from '../../lib/ai/assistant';
-import type { AssistantContext } from '../../lib/ai/prompts';
+import type { ChatMessage } from '@/lib/ai/assistant';
+import type { AssistantContext } from '@/lib/ai/prompts';
 
 // ============================================================
 // CHAT WINDOW — full message thread + streaming handler

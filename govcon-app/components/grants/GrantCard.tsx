@@ -6,7 +6,7 @@ import { Calendar, DollarSign, ExternalLink, Building2, Users } from 'lucide-rea
 import {
   fmtAmountRange, CATEGORY_LABELS, CATEGORY_COLORS,
   GRANT_TYPE_LABELS, GRANT_TYPE_COLORS, type Grant,
-} from '../../lib/api/grants';
+} from '@/lib/api/grants';
 
 // ============================================================
 // GRANT CARD — listing card for grants directory

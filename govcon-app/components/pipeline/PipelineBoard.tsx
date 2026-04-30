@@ -12,7 +12,7 @@ import {
   PIPELINE_STAGES,
   type PipelineItem,
   type PipelineStage,
-} from '../../lib/api/pipeline';
+} from '@/lib/api/pipeline';
 
 // ============================================================
 // PIPELINE BOARD

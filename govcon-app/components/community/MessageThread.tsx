@@ -2,7 +2,7 @@
 
 import React, { useState, useRef, useEffect } from 'react';
 import { Send, Loader2 } from 'lucide-react';
-import { useMessageThread, sendMessage, type CommunityMessage } from '../../lib/api/community';
+import { useMessageThread, sendMessage, type CommunityMessage } from '@/lib/api/community';
 
 // ============================================================
 // MESSAGE THREAD — direct messages between connected profiles

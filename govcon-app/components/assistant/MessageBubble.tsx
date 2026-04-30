@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
 import { Bot, User, Copy, Check, Wrench } from 'lucide-react';
 import { ApprovalCard } from './ApprovalCard';
-import type { ChatMessage } from '../../lib/ai/assistant';
+import type { ChatMessage } from '@/lib/ai/assistant';
 
 // ============================================================
 // MESSAGE BUBBLE — renders user + assistant messages

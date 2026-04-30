@@ -3,7 +3,7 @@
 import React, { useState, useCallback, useTransition } from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { Search, X } from 'lucide-react';
-import { updateSearchParam } from '../../lib/api/contracts';
+import { updateSearchParam } from '@/lib/api/contracts';
 
 // ============================================================
 // SEARCH BAR

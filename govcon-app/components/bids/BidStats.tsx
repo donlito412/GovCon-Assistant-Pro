@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Trophy, TrendingUp, Clock, DollarSign, Target } from 'lucide-react';
-import { fmtCents, type BidStats as BidStatsType } from '../../lib/api/bids';
+import { fmtCents, type BidStats as BidStatsType } from '@/lib/api/bids';
 
 // ============================================================
 // BID STATS PANEL

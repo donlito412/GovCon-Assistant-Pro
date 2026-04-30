@@ -3,9 +3,9 @@
 import React, { useState } from 'react';
 import Link from 'next/link';
 import { Bell, Plus, Loader2, AlertCircle, Search } from 'lucide-react';
-import { SavedSearchCard } from '../../../components/saved-searches/SavedSearchCard';
-import { SaveSearchModal } from '../../../components/saved-searches/SaveSearchModal';
-import { useSavedSearches } from '../../../lib/api/saved-searches';
+import { SavedSearchCard } from '@/components/saved-searches/SavedSearchCard';
+import { SaveSearchModal } from '@/components/saved-searches/SaveSearchModal';
+import { useSavedSearches } from '@/lib/api/saved-searches';
 
 // ============================================================
 // SAVED SEARCHES PAGE — /saved-searches

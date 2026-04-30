@@ -3,7 +3,7 @@
 import React from 'react';
 import { KanbanSquare, Plus } from 'lucide-react';
 import Link from 'next/link';
-import { PipelineBoard } from '../../../components/pipeline/PipelineBoard';
+import { PipelineBoard } from '@/components/pipeline/PipelineBoard';
 
 // ============================================================
 // PIPELINE PAGE — /pipeline

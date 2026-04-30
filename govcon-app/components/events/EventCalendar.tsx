@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { ChevronLeft, ChevronRight } from 'lucide-react';
-import { EVENT_TYPE_COLORS, type CalendarEvent } from '../../lib/api/events';
+import { EVENT_TYPE_COLORS, type CalendarEvent } from '@/lib/api/events';
 import { EventCard } from './EventCard';
 
 // ============================================================

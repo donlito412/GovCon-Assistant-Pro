@@ -6,8 +6,8 @@ import { useDebounce } from 'use-debounce';
 import useSWR from 'swr';
 import {
   useCommunityProfiles, type ProfileFilters, type CommunityProfile,
-} from '../../../lib/api/community';
-import { BusinessProfileCard } from '../../../components/community/BusinessProfileCard';
+} from '@/lib/api/community';
+import { BusinessProfileCard } from '@/components/community/BusinessProfileCard';
 
 // ============================================================
 // COMMUNITY DIRECTORY PAGE — /community

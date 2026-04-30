@@ -1,7 +1,7 @@
 'use client';
 
 import React from 'react';
-import { STATUS_LABELS, STATUS_COLORS, type OutreachStatus } from '../../lib/api/outreach';
+import { STATUS_LABELS, STATUS_COLORS, type OutreachStatus } from '@/lib/api/outreach';
 
 interface Props {
   status: OutreachStatus;

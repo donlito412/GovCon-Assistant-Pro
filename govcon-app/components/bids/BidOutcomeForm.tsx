@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Trophy, XCircle, Loader2 } from 'lucide-react';
-import { updateBid, type BidRecord, type BidStatus } from '../../lib/api/bids';
+import { updateBid, type BidRecord, type BidStatus } from '@/lib/api/bids';
 
 // ============================================================
 // BID OUTCOME FORM — record win/loss/withdrawal

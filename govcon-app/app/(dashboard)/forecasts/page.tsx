@@ -6,8 +6,8 @@ import Link from 'next/link';
 import { useDebounce } from 'use-debounce';
 import {
   useForecasts, type ForecastFilters, type ForecastOpportunity,
-} from '../../../lib/api/forecasts';
-import { ForecastCard } from '../../../components/forecasts/ForecastCard';
+} from '@/lib/api/forecasts';
+import { ForecastCard } from '@/components/forecasts/ForecastCard';
 
 // ============================================================
 // FORECAST OPPORTUNITIES PAGE — /forecasts

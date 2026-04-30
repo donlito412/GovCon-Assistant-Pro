@@ -16,7 +16,7 @@ import {
   type PipelineItem,
   type PipelineStage,
   type PipelineNote,
-} from '../../lib/api/pipeline';
+} from '@/lib/api/pipeline';
 
 // ============================================================
 // PIPELINE CARD DETAIL — slide-out panel

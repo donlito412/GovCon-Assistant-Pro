@@ -2,8 +2,8 @@
 
 import React, { useState } from 'react';
 import { Building2, Loader2, AlertCircle, Search } from 'lucide-react';
-import { AgencyCard } from '../../../components/agencies/AgencyCard';
-import { useAgencies, LEVEL_LABELS, type AgencyLevel } from '../../../lib/api/agencies';
+import { AgencyCard } from '@/components/agencies/AgencyCard';
+import { useAgencies, LEVEL_LABELS, type AgencyLevel } from '@/lib/api/agencies';
 
 // ============================================================
 // AGENCY DIRECTORY PAGE — /agencies

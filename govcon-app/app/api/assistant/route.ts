@@ -6,8 +6,8 @@
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { streamChatResponse, saveConversation, type ChatMessage } from '../../../lib/ai/assistant';
-import type { AssistantContext } from '../../../lib/ai/prompts';
+import { streamChatResponse, saveConversation, type ChatMessage } from '@/lib/ai/assistant';
+import type { AssistantContext } from '@/lib/ai/prompts';
 
 export const maxDuration = 120;
 

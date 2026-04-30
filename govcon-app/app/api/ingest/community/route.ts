@@ -4,7 +4,7 @@
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { ingestPaCorps } from '../../../../lib/ingestion/community/pa_corps';
+import { ingestPaCorps } from '@/lib/ingestion/community/pa_corps';
 
 export const maxDuration = 300;
 

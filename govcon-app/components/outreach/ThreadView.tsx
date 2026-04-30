@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { ArrowUpRight, ArrowDownLeft, Loader2 } from 'lucide-react';
-import { useEmailThread, type OutreachEmail } from '../../lib/api/outreach';
+import { useEmailThread, type OutreachEmail } from '@/lib/api/outreach';
 
 // ============================================================
 // THREAD VIEW — full email conversation history

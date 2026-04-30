@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Building2, Calendar, Users, DollarSign, ChevronRight } from 'lucide-react';
-import { BID_STATUS_LABELS, BID_STATUS_COLORS, fmtCents, type BidRecord } from '../../lib/api/bids';
+import { BID_STATUS_LABELS, BID_STATUS_COLORS, fmtCents, type BidRecord } from '@/lib/api/bids';
 
 // ============================================================
 // BID CARD — listing card

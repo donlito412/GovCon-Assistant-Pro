@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell, LabelList,
 } from 'recharts';
-import { fmt, type PipelineStageStat } from '../../lib/api/analytics';
+import { fmt, type PipelineStageStat } from '@/lib/api/analytics';
 
 // ============================================================
 // PIPELINE VALUE CHART — Bar chart, $ value per stage

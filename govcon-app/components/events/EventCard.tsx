@@ -5,7 +5,7 @@ import { Calendar, Clock, MapPin, ExternalLink, Video, Download, Bookmark, Check
 import {
   EVENT_TYPE_LABELS, EVENT_TYPE_COLORS, WHY_RELEVANT_LABELS,
   fmtEventTime, downloadIcs, type CalendarEvent,
-} from '../../lib/api/events';
+} from '@/lib/api/events';
 
 // ============================================================
 // EVENT CARD — listing card for events page

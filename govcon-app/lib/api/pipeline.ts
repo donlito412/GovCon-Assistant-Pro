@@ -74,6 +74,8 @@ export interface PipelineOpportunity {
   place_of_performance_state: string | null;
   url: string | null;
   status: string;
+  naics_code: number | null;
+  naics_sector: string | null;
 }
 
 export interface PipelineItem {

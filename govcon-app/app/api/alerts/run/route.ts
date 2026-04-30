@@ -14,7 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { Resend } from 'resend';
 import { render } from '@react-email/render';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { AlertEmail } from '../../../../lib/email/alert-email';
+import { AlertEmail } from '@/lib/email/alert-email';
 
 // ---- Env ----
 const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
@@ -146,7 +146,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
       const filtersQs = new URLSearchParams(Object.entries(filters)).toString();
 
       // 5. Render email
-      const html = render(
+      const html = await render(
         AlertEmail({
           searchName: search.name,
           newMatchCount: unsent.length,

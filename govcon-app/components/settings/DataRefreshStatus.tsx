@@ -128,7 +128,9 @@ export function DataRefreshStatus() {
                       </td>
                       <td className="px-4 py-3 text-center">
                         {entry.status === 'success' && (
-                          <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" title="Success" />
+                          <span title="Success">
+                            <CheckCircle2 className="w-4 h-4 text-green-500 mx-auto" />
+                          </span>
                         )}
                         {entry.status === 'error' && (
                           <span title={entry.error_message ?? 'Error'}>

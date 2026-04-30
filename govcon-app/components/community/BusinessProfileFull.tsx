@@ -6,7 +6,7 @@ import {
   MapPin, Globe, Mail, Phone, Building2, Users, CheckCircle2,
   UserPlus, MessageSquare, Handshake, ExternalLink,
 } from 'lucide-react';
-import { activeCertLabels, LOOKING_FOR_LABELS, type CommunityProfile } from '../../lib/api/community';
+import { activeCertLabels, LOOKING_FOR_LABELS, type CommunityProfile } from '@/lib/api/community';
 import { ConnectionRequest } from './ConnectionRequest';
 import { MessageThread } from './MessageThread';
 

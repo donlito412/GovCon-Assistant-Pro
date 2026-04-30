@@ -65,7 +65,7 @@ export interface ContractFilters {
 
 // ---- Fetcher ----
 
-const fetcher = async (url: string): Promise<ContractsResponse> => {
+const fetcher = async (url: string) => {
   const res = await fetch(url);
   if (!res.ok) {
     const err = await res.json().catch(() => ({ error: 'Unknown error' }));

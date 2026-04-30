@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { Loader2, AlertCircle, Trophy } from 'lucide-react';
-import { useAgencyAwards, formatAwardDollars, type Award } from '../../lib/api/agencies';
+import { useAgencyAwards, formatAwardDollars, type Award } from '@/lib/api/agencies';
 
 // ============================================================
 // AWARD HISTORY

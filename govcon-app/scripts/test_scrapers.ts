@@ -17,12 +17,12 @@ dotenv.config({ path: path.resolve(__dirname, '../../../.env.local') });
 dotenv.config({ path: path.resolve(__dirname, '../../../.env') });
 dotenv.config();
 
-import { scrapeEMarketplace } from '../lib/ingestion/pa_emarketplace';
-import { scrapePaTreasury } from '../lib/ingestion/pa_treasury';
-import { scrapeAlleghenyCounty } from '../lib/ingestion/allegheny_county';
-import { scrapePittsburghCity } from '../lib/ingestion/pittsburgh_city';
-import type { ScraperResult, ScrapedOpportunity } from '../lib/ingestion/shared/normalize_shared';
-import { computeDedupHash, deriveThresholdCategory, mapContractType, parseToIso } from '../lib/ingestion/shared/normalize_shared';
+import { scrapeEMarketplace } from '@/lib/ingestion/pa_emarketplace';
+import { scrapePaTreasury } from '@/lib/ingestion/pa_treasury';
+import { scrapeAlleghenyCounty } from '@/lib/ingestion/allegheny_county';
+import { scrapePittsburghCity } from '@/lib/ingestion/pittsburgh_city';
+import type { ScraperResult, ScrapedOpportunity } from '@/lib/ingestion/shared/normalize_shared';
+import { computeDedupHash, deriveThresholdCategory, mapContractType, parseToIso } from '@/lib/ingestion/shared/normalize_shared';
 
 function sep(label: string): void {
   console.log('\n' + '='.repeat(60));

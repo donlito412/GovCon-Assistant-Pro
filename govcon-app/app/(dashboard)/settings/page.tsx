@@ -7,10 +7,10 @@ import {
   Settings, User, Bell, Key, Database,
   LogOut, Loader2, AlertCircle,
 } from 'lucide-react';
-import { ProfileForm } from '../../../components/settings/ProfileForm';
-import { NotificationPreferences } from '../../../components/settings/NotificationPreferences';
-import { ApiKeysPanel } from '../../../components/settings/ApiKeysPanel';
-import { DataRefreshStatus } from '../../../components/settings/DataRefreshStatus';
+import { ProfileForm } from '@/components/settings/ProfileForm';
+import { NotificationPreferences } from '@/components/settings/NotificationPreferences';
+import { ApiKeysPanel } from '@/components/settings/ApiKeysPanel';
+import { DataRefreshStatus } from '@/components/settings/DataRefreshStatus';
 
 // ============================================================
 // SETTINGS PAGE — /settings

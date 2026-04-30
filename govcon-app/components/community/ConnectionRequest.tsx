@@ -5,7 +5,7 @@ import { Check, X, Loader2, UserPlus, UserCheck } from 'lucide-react';
 import {
   sendConnectionRequest, respondToConnection,
   type CommunityProfile, type ConnectionRequest as ConnReq,
-} from '../../lib/api/community';
+} from '@/lib/api/community';
 
 // ============================================================
 // CONNECTION REQUEST — send / accept / decline

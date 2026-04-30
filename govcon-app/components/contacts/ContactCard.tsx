@@ -8,7 +8,7 @@ import {
 import {
   activeCerts, STATUS_COLORS, SOURCE_LABELS, updateContactStatus,
   type Contact,
-} from '../../lib/api/company-search';
+} from '@/lib/api/company-search';
 
 // ============================================================
 // CONTACT CARD — saved contacts listing

@@ -9,7 +9,7 @@ import {
   formatValueCents,
   type PipelineItem,
   type PipelineStage,
-} from '../../lib/api/pipeline';
+} from '@/lib/api/pipeline';
 
 // ============================================================
 // PIPELINE COLUMN

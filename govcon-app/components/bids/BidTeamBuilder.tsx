@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Plus, Trash2, Users, ChevronDown, ChevronUp } from 'lucide-react';
-import type { TeamMember } from '../../lib/api/bids';
+import type { TeamMember } from '@/lib/api/bids';
 
 // ============================================================
 // BID TEAM BUILDER — assemble subcontractor team for a bid

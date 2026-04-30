@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Send, Loader2 } from 'lucide-react';
-import { addNote, type PipelineNote } from '../../lib/api/pipeline';
+import { addNote, type PipelineNote } from '@/lib/api/pipeline';
 
 // ============================================================
 // ADD NOTE FORM

@@ -5,9 +5,9 @@ import { Loader2, AlertCircle, Handshake, Plus, RefreshCw } from 'lucide-react';
 import useSWR from 'swr';
 import {
   useTeamingPosts, type TeamingPost, type CommunityProfile,
-} from '../../../lib/api/community';
-import { TeamingPostCard } from '../../../components/community/TeamingPostCard';
-import { PostTeamingRequest } from '../../../components/community/PostTeamingRequest';
+} from '@/lib/api/community';
+import { TeamingPostCard } from '@/components/community/TeamingPostCard';
+import { PostTeamingRequest } from '@/components/community/PostTeamingRequest';
 
 // ============================================================
 // TEAMING BOARD PAGE — /community/teaming

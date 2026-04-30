@@ -86,7 +86,7 @@ export async function scrapeDuquesne(): Promise<ScraperResult> {
         const linkEl = $el.find('a').first();
         const href = linkEl.attr('href') ?? '';
         const text = linkEl.text().trim() || $el.text().trim().slice(0, 140);
-        if (!text || text.length < 8) return;
+        if (!text || text.length < 8) continue;
         if (!/rfp|rfq|bid|solicitation|proposal|procurement/i.test(text + href)) continue;
 
         const key = text.toLowerCase().trim();

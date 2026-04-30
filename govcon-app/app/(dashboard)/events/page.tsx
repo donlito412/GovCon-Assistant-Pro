@@ -3,10 +3,10 @@
 import React, { useState, useCallback } from 'react';
 import { Search, Loader2, AlertCircle, CalendarDays, List, RefreshCw } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
-import { useEvents, type EventFilters, type CalendarEvent } from '../../../lib/api/events';
-import { EventCard } from '../../../components/events/EventCard';
-import { EventCalendar } from '../../../components/events/EventCalendar';
-import { EventFilterPanel } from '../../../components/events/EventFilterPanel';
+import { useEvents, type EventFilters, type CalendarEvent } from '@/lib/api/events';
+import { EventCard } from '@/components/events/EventCard';
+import { EventCalendar } from '@/components/events/EventCalendar';
+import { EventFilterPanel } from '@/components/events/EventFilterPanel';
 
 // ============================================================
 // EVENTS PAGE — /events

@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Bell, BellOff, Loader2 } from 'lucide-react';
-import { toggleAlert } from '../../lib/api/saved-searches';
+import { toggleAlert } from '@/lib/api/saved-searches';
 
 // ============================================================
 // ALERT PREFERENCES TOGGLE

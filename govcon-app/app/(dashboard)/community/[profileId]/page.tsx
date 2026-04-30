@@ -6,8 +6,8 @@ import { ArrowLeft, Loader2, AlertCircle } from 'lucide-react';
 import useSWR from 'swr';
 import {
   useCommunityProfile, useConnections, type CommunityProfile, type ConnectionRequest,
-} from '../../../lib/api/community';
-import { BusinessProfileFull } from '../../../components/community/BusinessProfileFull';
+} from '@/lib/api/community';
+import { BusinessProfileFull } from '@/components/community/BusinessProfileFull';
 
 // ============================================================
 // BUSINESS PROFILE PAGE — /community/[profileId]

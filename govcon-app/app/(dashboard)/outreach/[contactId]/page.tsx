@@ -7,13 +7,13 @@ import {
   ArrowLeft, Mail, Phone, Globe, PenLine,
   Loader2, AlertCircle, MessageSquare,
 } from 'lucide-react';
-import { OutreachStatusBadge } from '../../../components/outreach/OutreachStatusBadge';
-import { ThreadView } from '../../../components/outreach/ThreadView';
-import { ComposeEmail } from '../../../components/outreach/ComposeEmail';
+import { OutreachStatusBadge } from '@/components/outreach/OutreachStatusBadge';
+import { ThreadView } from '@/components/outreach/ThreadView';
+import { ComposeEmail } from '@/components/outreach/ComposeEmail';
 import {
   updateOutreachStatus, STATUS_LABELS,
   type OutreachContact, type OutreachStatus,
-} from '../../../lib/api/outreach';
+} from '@/lib/api/outreach';
 
 // ============================================================
 // OUTREACH CONTACT THREAD PAGE — /outreach/[contactId]

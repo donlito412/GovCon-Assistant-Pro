@@ -3,7 +3,7 @@
 import React from 'react';
 import Link from 'next/link';
 import { Building2 } from 'lucide-react';
-import { fmt, type AgencyStat } from '../../lib/api/analytics';
+import { fmt, type AgencyStat } from '@/lib/api/analytics';
 
 // ============================================================
 // TOP AGENCIES TABLE — top 10 by active opportunity count

@@ -2,7 +2,7 @@
 
 import React, { useState, useRef } from 'react';
 import { Search, SlidersHorizontal, Loader2, AlertCircle, Building2, X } from 'lucide-react';
-import { useCompanySearch } from '../../lib/api/company-search';
+import { useCompanySearch } from '@/lib/api/company-search';
 import { CompanySearchResult } from './CompanySearchResult';
 
 // ============================================================

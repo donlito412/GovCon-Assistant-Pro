@@ -10,7 +10,7 @@ import { RecompeteTimeline } from './RecompeteTimeline';
 import {
   daysUntilExpiry, formatValue, recompeteLikelyLabel, urgencyLevel,
   type IncumbentContract,
-} from '../../lib/api/recompetes';
+} from '@/lib/api/recompetes';
 
 // ============================================================
 // RECOMPETE CARD — expiring contract with intelligence panel

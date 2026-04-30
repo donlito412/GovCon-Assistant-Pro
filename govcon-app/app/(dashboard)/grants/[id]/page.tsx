@@ -11,7 +11,7 @@ import {
 import {
   fmtAmountRange, CATEGORY_LABELS, CATEGORY_COLORS,
   GRANT_TYPE_LABELS, GRANT_TYPE_COLORS, type Grant,
-} from '../../../lib/api/grants';
+} from '@/lib/api/grants';
 
 // ============================================================
 // GRANT DETAIL PAGE — /grants/[id]

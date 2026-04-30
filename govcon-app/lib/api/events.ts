@@ -48,6 +48,7 @@ export interface EventFilters {
   date_to?: string;
   sort?: 'date_asc' | 'date_desc';
   page?: number;
+  per_page?: number;
 }
 
 // ---- Fetcher ----

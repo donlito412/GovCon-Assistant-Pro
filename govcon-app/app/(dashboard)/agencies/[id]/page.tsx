@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { useParams } from 'next/navigation';
 import { Loader2, AlertCircle, FileSearch, BarChart3, Hash, Trophy } from 'lucide-react';
-import { AgencyHeader } from '../../../components/agencies/AgencyHeader';
-import { SpendingChart } from '../../../components/agencies/SpendingChart';
-import { TopNaicsList } from '../../../components/agencies/TopNaicsList';
-import { ActiveContractsList } from '../../../components/agencies/ActiveContractsList';
-import { AwardHistory } from '../../../components/agencies/AwardHistory';
-import { useAgencyDetail } from '../../../lib/api/agencies';
+import { AgencyHeader } from '@/components/agencies/AgencyHeader';
+import { SpendingChart } from '@/components/agencies/SpendingChart';
+import { TopNaicsList } from '@/components/agencies/TopNaicsList';
+import { ActiveContractsList } from '@/components/agencies/ActiveContractsList';
+import { AwardHistory } from '@/components/agencies/AwardHistory';
+import { useAgencyDetail } from '@/lib/api/agencies';
 
 // ============================================================
 // AGENCY DETAIL / PROFILE PAGE — /agencies/[id]

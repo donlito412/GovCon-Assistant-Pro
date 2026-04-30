@@ -6,7 +6,7 @@ import { MapPin, Building2, CheckCircle2, Users, ChevronRight, UserPlus } from '
 import {
   activeCertLabels, LOOKING_FOR_LABELS,
   type CommunityProfile,
-} from '../../lib/api/community';
+} from '@/lib/api/community';
 import { ConnectionRequest } from './ConnectionRequest';
 
 // ============================================================

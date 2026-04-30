@@ -3,12 +3,12 @@
 import React, { useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { LayoutGrid, List, Loader2, FileSearch, ChevronLeft, ChevronRight } from 'lucide-react';
-import { SearchBar } from '../../../components/contracts/SearchBar';
-import { SortControls } from '../../../components/contracts/SortControls';
-import { FilterPanel } from '../../../components/contracts/FilterPanel';
-import { ContractCard } from '../../../components/contracts/ContractCard';
-import { ContractTable } from '../../../components/contracts/ContractTable';
-import { useContracts, updateSearchParam, type ContractListItem } from '../../../lib/api/contracts';
+import { SearchBar } from '@/components/contracts/SearchBar';
+import { SortControls } from '@/components/contracts/SortControls';
+import { FilterPanel } from '@/components/contracts/FilterPanel';
+import { ContractCard } from '@/components/contracts/ContractCard';
+import { ContractTable } from '@/components/contracts/ContractTable';
+import { useContracts, updateSearchParam, type ContractListItem } from '@/lib/api/contracts';
 
 // ============================================================
 // CONTRACTS LIST PAGE

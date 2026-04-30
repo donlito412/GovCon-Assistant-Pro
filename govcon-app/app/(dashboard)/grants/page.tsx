@@ -2,9 +2,9 @@
 
 import React, { useState, useCallback } from 'react';
 import { Search, Loader2, AlertCircle, Landmark, RefreshCw } from 'lucide-react';
-import { useGrants, type GrantFilters } from '../../../lib/api/grants';
-import { GrantCard } from '../../../components/grants/GrantCard';
-import { GrantFilterPanel } from '../../../components/grants/GrantFilterPanel';
+import { useGrants, type GrantFilters } from '@/lib/api/grants';
+import { GrantCard } from '@/components/grants/GrantCard';
+import { GrantFilterPanel } from '@/components/grants/GrantFilterPanel';
 import { useDebounce } from 'use-debounce';
 
 // ============================================================

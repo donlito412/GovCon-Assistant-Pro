@@ -5,7 +5,7 @@ import {
   BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, Cell,
 } from 'recharts';
-import { type AgencyStats } from '../../lib/api/agencies';
+import { type AgencyStats } from '@/lib/api/agencies';
 
 // ============================================================
 // SPENDING CHART

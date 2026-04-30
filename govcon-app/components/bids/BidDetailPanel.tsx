@@ -8,7 +8,7 @@ import {
 import {
   BID_STATUS_LABELS, BID_STATUS_COLORS, fmtCents,
   type BidRecord,
-} from '../../lib/api/bids';
+} from '@/lib/api/bids';
 import { BidOutcomeForm } from './BidOutcomeForm';
 
 // ============================================================

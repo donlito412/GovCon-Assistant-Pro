@@ -2,7 +2,7 @@
 
 import React, { useState } from 'react';
 import { Send, Loader2, X, PenLine } from 'lucide-react';
-import { sendOutreachEmail, type OutreachContact } from '../../lib/api/outreach';
+import { sendOutreachEmail, type OutreachContact } from '@/lib/api/outreach';
 
 // ============================================================
 // COMPOSE EMAIL — send via Resend or log inbound reply

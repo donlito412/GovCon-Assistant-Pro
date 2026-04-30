@@ -6,10 +6,10 @@ import {
 } from 'lucide-react';
 import {
   useBids, computeBidStats, type BidFilters, type BidRecord,
-} from '../../../lib/api/bids';
-import { BidCard } from '../../../components/bids/BidCard';
-import { BidStats } from '../../../components/bids/BidStats';
-import { SubmitBidForm } from '../../../components/bids/SubmitBidForm';
+} from '@/lib/api/bids';
+import { BidCard } from '@/components/bids/BidCard';
+import { BidStats } from '@/components/bids/BidStats';
+import { SubmitBidForm } from '@/components/bids/SubmitBidForm';
 
 // ============================================================
 // BID HISTORY PAGE — /bids

@@ -6,8 +6,8 @@ import { useDebounce } from 'use-debounce';
 import {
   useOutreachContacts, updateOutreachStatus,
   STATUS_LABELS, type OutreachStatus,
-} from '../../../lib/api/outreach';
-import { OutreachContactCard } from '../../../components/outreach/ContactCard';
+} from '@/lib/api/outreach';
+import { OutreachContactCard } from '@/components/outreach/ContactCard';
 
 // ============================================================
 // OUTREACH CRM PAGE — /outreach
@@ -127,7 +127,7 @@ export default function OutreachPage() {
       {/* Grid */}
       {contacts.length > 0 && (
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4">
-          {contacts.map((c) => (
+          {contacts.map((c: any) => (
             <OutreachContactCard key={c.id} contact={c} onStatusChange={handleStatusChange} />
           ))}
         </div>

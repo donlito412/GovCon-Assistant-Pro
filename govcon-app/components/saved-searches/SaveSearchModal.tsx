@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react';
 import { useSearchParams } from 'next/navigation';
 import { X, Bell, BellOff, Bookmark, Loader2 } from 'lucide-react';
-import { createSavedSearch, buildFiltersJson, filterSummary } from '../../lib/api/saved-searches';
+import { createSavedSearch, buildFiltersJson, filterSummary } from '@/lib/api/saved-searches';
 
 // ============================================================
 // SAVE SEARCH MODAL

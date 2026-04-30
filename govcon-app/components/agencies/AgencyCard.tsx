@@ -6,7 +6,7 @@ import { Building2, ExternalLink, FileSearch, DollarSign } from 'lucide-react';
 import {
   LEVEL_LABELS, LEVEL_COLORS, formatDollars,
   type Agency, type AgencyLevel,
-} from '../../lib/api/agencies';
+} from '@/lib/api/agencies';
 
 // ============================================================
 // AGENCY CARD — used in the agency directory grid

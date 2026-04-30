@@ -5,9 +5,9 @@ import { useSearchParams } from 'next/navigation';
 import {
   Bot, Plus, MessageSquare, Loader2, ChevronLeft, ChevronRight, Trash2,
 } from 'lucide-react';
-import { ChatWindow } from '../../../components/assistant/ChatWindow';
-import type { ChatMessage } from '../../../lib/ai/assistant';
-import type { AssistantContext } from '../../../lib/ai/prompts';
+import { ChatWindow } from '@/components/assistant/ChatWindow';
+import type { ChatMessage } from '@/lib/ai/assistant';
+import type { AssistantContext } from '@/lib/ai/prompts';
 
 // ============================================================
 // AI ASSISTANT PAGE — /assistant

@@ -3,9 +3,9 @@
 import React, { useState, useCallback } from 'react';
 import { Search, Loader2, AlertCircle, BookUser, RefreshCw, Plus } from 'lucide-react';
 import { useDebounce } from 'use-debounce';
-import { useContacts, type ContactFilters, type Contact } from '../../../lib/api/company-search';
-import { ContactCard } from '../../../components/contacts/ContactCard';
-import { CompanySearchPanel } from '../../../components/company-finder/CompanySearchPanel';
+import { useContacts, type ContactFilters, type Contact } from '@/lib/api/company-search';
+import { ContactCard } from '@/components/contacts/ContactCard';
+import { CompanySearchPanel } from '@/components/company-finder/CompanySearchPanel';
 
 // ============================================================
 // CONTACTS PAGE — /contacts
