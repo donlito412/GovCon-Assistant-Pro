@@ -1,5 +1,8 @@
 'use client';
 
+export const dynamic = 'force-dynamic';
+
+
 import React, { useState } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import { LayoutGrid, List, Loader2, FileSearch, ChevronLeft, ChevronRight } from 'lucide-react';
