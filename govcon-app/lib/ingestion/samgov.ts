@@ -146,6 +146,10 @@ async function fetchPage(
   postedFrom: string,
   postedTo: string,
 ): Promise<SamGovSearchResponse> {
+  // NOTE: We fetch all PA active opportunities and filter to Pittsburgh MSA post-fetch.
+  // We do NOT send the NAICS list as an API param — SAM.gov truncates long query strings
+  // and a 500-item NAICS param causes the API to return 0 results.
+  // Pittsburgh MSA filtering happens in normalizePittsburghOpportunities().
   const params = new URLSearchParams({
     api_key: apiKey,
     limit: String(PAGE_LIMIT),
@@ -155,7 +159,6 @@ async function fetchPage(
     ptype: '',
     state: 'PA',
     status: 'active',
-    naics: PITTSBURGH_REGION_NAICS.join(','), // Include comprehensive NAICS codes
   });
 
   const url = `${SAM_BASE_URL}?${params.toString()}`;
@@ -231,7 +234,7 @@ function todayDateString(): string {
  */
 export async function fetchAllPAOpportunities(
   apiKey: string,
-  lookbackDays = 90,
+  lookbackDays = 180,
 ): Promise<FetchAllOpportunitiesResult> {
   if (!apiKey) {
     throw new Error('SAM.gov API key is required. Set SAMGOV_API_KEY in environment.');

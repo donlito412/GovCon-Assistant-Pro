@@ -3,22 +3,45 @@ import Link from 'next/link';
 import {
   LayoutDashboard, FileSearch, KanbanSquare, Bell,
   BarChart3, Building2, Users, Menu, Bot,
+  Gift, CalendarDays, Briefcase, Mail, UserSearch,
+  TrendingUp, RefreshCw,
 } from 'lucide-react';
 
 // ============================================================
 // DASHBOARD LAYOUT
 // Sidebar nav shell wrapping all dashboard routes.
-// Sidebar collapses on mobile (hamburger toggling handled client-side).
 // ============================================================
 
-const NAV_ITEMS = [
-  { href: '/',              label: 'Dashboard',     icon: LayoutDashboard },
-  { href: '/contracts',     label: 'Contracts',     icon: FileSearch },
-  { href: '/pipeline',      label: 'Pipeline',      icon: KanbanSquare },
-  { href: '/assistant',     label: 'AI Assistant',  icon: Bot },
-  { href: '/saved-searches',label: 'Saved Searches',icon: Bell },
-  { href: '/analytics',     label: 'Analytics',     icon: BarChart3 },
-  { href: '/agencies',      label: 'Agencies',      icon: Building2 },
+const NAV_SECTIONS = [
+  {
+    label: 'DISCOVER',
+    items: [
+      { href: '/',           label: 'Dashboard',      icon: LayoutDashboard },
+      { href: '/contracts',  label: 'Contracts',      icon: FileSearch },
+      { href: '/grants',     label: 'Grants',         icon: Gift },
+      { href: '/events',     label: 'Events',         icon: CalendarDays },
+      { href: '/forecasts',  label: 'Forecasts',      icon: TrendingUp },
+    ],
+  },
+  {
+    label: 'MANAGE',
+    items: [
+      { href: '/pipeline',   label: 'Pipeline',       icon: KanbanSquare },
+      { href: '/bids',       label: 'Bid Tracker',    icon: Briefcase },
+      { href: '/outreach',   label: 'Outreach',       icon: Mail },
+      { href: '/saved-searches', label: 'Saved Searches', icon: Bell },
+    ],
+  },
+  {
+    label: 'INTELLIGENCE',
+    items: [
+      { href: '/agencies',   label: 'Agencies',       icon: Building2 },
+      { href: '/contacts',   label: 'Subcontractors', icon: UserSearch },
+      { href: '/recompetes', label: 'Recompetes',     icon: RefreshCw },
+      { href: '/analytics',  label: 'Analytics',      icon: BarChart3 },
+      { href: '/assistant',  label: 'AI Assistant',   icon: Bot },
+    ],
+  },
 ];
 
 function SidebarLink({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {
@@ -52,9 +75,18 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </div>
 
             {/* Nav */}
-            <nav className="flex-1 px-3 py-4 space-y-0.5 overflow-y-auto">
-              {NAV_ITEMS.map((item) => (
-                <SidebarLink key={item.href} {...item} />
+            <nav className="flex-1 px-3 py-4 overflow-y-auto space-y-4">
+              {NAV_SECTIONS.map((section) => (
+                <div key={section.label}>
+                  <p className="px-3 mb-1 text-[10px] font-semibold tracking-widest text-gray-400 uppercase">
+                    {section.label}
+                  </p>
+                  <div className="space-y-0.5">
+                    {section.items.map((item) => (
+                      <SidebarLink key={item.href} {...item} />
+                    ))}
+                  </div>
+                </div>
               ))}
             </nav>
 

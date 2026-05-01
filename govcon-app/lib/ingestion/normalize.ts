@@ -165,51 +165,74 @@ export function computeDedupHash(
 // PITTSBURGH FILTER
 // ============================================================
 
+// Pittsburgh MSA cities — used for place-of-performance filtering
+const PITTSBURGH_MSA_CITIES = new Set([
+  'pittsburgh', 'allegheny', 'monroeville', 'west mifflin', 'mckeesport',
+  'bethel park', 'canonsburg', 'wexford', 'cranberry township', 'cranberry',
+  'mars', 'moon', 'coraopolis', 'carnegie', 'mt lebanon', 'mount lebanon',
+  'upper st clair', 'peters township', 'bethel park', 'brentwood',
+  'swissvale', 'edgewood', 'churchill', 'penn hills', 'plum', 'murrysville',
+  'export', 'irwin', 'north huntingdon', 'greensburg', 'jeannette',
+  'latrobe', 'connellsville', 'uniontown', 'beaver', 'beaver falls',
+  'aliquippa', 'ambridge', 'economy', 'rochester', 'butler',
+  'cranberry', 'slippery rock', 'grove city', 'washington', 'charleroi',
+  'monessen', 'donora', 'california', 'waynesburg', 'kittanning',
+  'ford city', 'apollo', 'leechburg', 'new kensington', 'lower burrell',
+  'brackenridge', 'tarentum', 'natrona heights', 'oakmont', 'verona',
+  'springdale', 'cheswick', 'harmarville', 'etna', 'millvale', 'aspinwall',
+  'oakdale', 'imperial', 'findlay', 'collier', 'robinson', 'kennedy',
+  'stowe', 'mckees rocks', 'crafton', 'rosslyn farms',
+]);
+
 /**
- * Returns true if the SAM.gov opportunity's place of performance is in the Pittsburgh area.
- * Expanded criteria for better coverage: zip code, county name, major Pittsburgh cities, state=PA.
- * SAM.gov does not filter by zip natively — we apply this filter post-fetch.
+ * Returns true if the SAM.gov opportunity's place of performance is in the Pittsburgh MSA.
+ *
+ * Inclusion logic (most → least specific):
+ *   1. ZIP starts with 15 (Allegheny + surrounding counties)
+ *   2. County is in Pittsburgh MSA counties
+ *   3. City name matches Pittsburgh MSA cities
+ *   4. No place-of-performance data at all → include if issuing office is in PA
+ *      (better to include more than miss local opportunities)
  */
 export function isPittsburghOpportunity(opp: SamGovOpportunity): boolean {
   const pop = opp.placeOfPerformance;
 
-  if (!pop) {
-    // No place of performance info — if state is PA, keep it (better to over-include than miss)
+  // No place-of-performance: check the contracting office ZIP/state
+  if (!pop || (!pop.zip && !pop.city?.name && !pop.county?.name)) {
+    const officeState = opp.officeAddress?.state?.toUpperCase() ?? '';
+    const officeZip = opp.officeAddress?.zipcode ?? '';
+    // If the contracting office is in PA, keep it — it's likely a Pittsburgh-area award
+    if (officeState === 'PA' || officeZip.startsWith('15')) return true;
+    // Also keep statewide opportunities with no specific city
     return false;
   }
 
   // Must be in Pennsylvania
-  const stateCode = pop.state?.code?.toUpperCase() ?? '';
-  const stateName = pop.state?.name?.toUpperCase() ?? '';
-  const isPA = stateCode === 'PA' || stateName === 'PENNSYLVANIA';
+  const stateCode = (pop.state?.code ?? '').toUpperCase();
+  const stateName = (pop.state?.name ?? '').toUpperCase();
+  const isPA = stateCode === 'PA' || stateName === 'PENNSYLVANIA' || stateName === 'PA';
   if (!isPA) return false;
 
-  // Check zip (expanded coverage)
-  if (pop.zip && isPittsburghAreaZip(pop.zip)) return true;
+  // 1. ZIP code filter — any 15xxx zip is Pittsburgh metro
+  if (pop.zip) {
+    const zip5 = pop.zip.slice(0, 5);
+    if (zip5.startsWith('15') || isPittsburghAreaZip(pop.zip)) return true;
+  }
 
-  // Check county (expanded coverage)
+  // 2. County filter
   if (pop.county?.name && isPittsburghAreaCounty(pop.county.name)) return true;
 
-  // Check major Pittsburgh area cities (more inclusive)
-  const city = (pop.city?.name ?? '').toLowerCase();
-  const pittsburghAreaCities = [
-    'pittsburgh', 'allegheny', 'butler', 'washington', 'greensburg', 'beaver falls', 
-    'new castle', 'monroeville', 'west mifflin', 'mckeesport', 'bethel park', 
-    'canonsburg', 'wexford', 'cranberry', 'mars', 'butler', 'washington', 
-    'greensburg', 'beaver', 'apollo', 'kittanning', 'ford city', 'butler'
-  ];
-  
-  if (pittsburghAreaCities.some(pittCity => city.includes(pittCity))) return true;
+  // 3. City filter
+  const city = (pop.city?.name ?? '').toLowerCase().trim();
+  if (city && PITTSBURGH_MSA_CITIES.has(city)) return true;
+  // Partial match for composite city names
+  for (const msaCity of PITTSBURGH_MSA_CITIES) {
+    if (city.includes(msaCity)) return true;
+  }
 
-  // Additional check: include all major cities in the 6-county region
-  const majorCitiesInRegion = [
-    'pittsburgh', 'allegheny', 'butler', 'washington', 'greensburg', 'beaver falls',
-    'monroeville', 'west mifflin', 'mckeesport', 'bethel park', 'canonsburg',
-    'wexford', 'cranberry', 'mars', 'new castle', 'kittanning', 'ford city',
-    'apollo', 'butler', 'washington', 'greensburg', 'beaver'
-  ];
-  
-  if (majorCitiesInRegion.some(cityName => city.includes(cityName))) return true;
+  // 4. Statewide PA opportunity with no specific city → include
+  //    (some federal contracts list "PA statewide" — we want those)
+  if ((stateCode === 'PA' || stateName === 'PENNSYLVANIA') && !pop.city?.name) return true;
 
   return false;
 }
