@@ -1,6 +1,5 @@
 import React from 'react';
 import Link from 'next/link';
-import { Inter } from 'next/font/google';
 import {
   LayoutDashboard, FileSearch, KanbanSquare, Bell,
   BarChart3, Building2, Users, Menu,
@@ -11,8 +10,6 @@ import {
 // Sidebar nav shell wrapping all dashboard routes.
 // Sidebar collapses on mobile (hamburger toggling handled client-side).
 // ============================================================
-
-const inter = Inter({ subsets: ['latin'] });
 
 const NAV_ITEMS = [
   { href: '/',              label: 'Dashboard',     icon: LayoutDashboard },
@@ -36,16 +33,9 @@ function SidebarLink({ href, label, icon: Icon }: { href: string; label: string;
   );
 }
 
-export const metadata = {
-  title: 'GovCon Assistant Pro',
-  description: 'Pittsburgh-Area Government Business Intelligence Platform',
-};
-
 export default function DashboardLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="en">
-      <body className={`${inter.className} antialiased bg-gray-50 text-gray-900`}>
-        <div className="min-h-screen flex">
+    <div className="min-h-screen flex">
           {/* Sidebar */}
           <aside className="hidden lg:flex flex-col w-64 bg-white border-r border-gray-200 fixed inset-y-0 left-0 z-30">
             {/* Logo */}
@@ -118,7 +108,5 @@ export default function DashboardLayout({ children }: { children: React.ReactNod
             </footer>
           </div>
         </div>
-      </body>
-    </html>
   );
 }
