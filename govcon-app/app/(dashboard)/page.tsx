@@ -5,15 +5,15 @@ export const fetchCache = 'force-no-store';
 import React from 'react';
 import Link from 'next/link';
 import {
-  FileSearch, KanbanSquare, Bell, TrendingUp,
-  ArrowRight, Clock, DollarSign, AlertTriangle,
+  FileSearch, KanbanSquare, TrendingUp, ArrowRight,
+  Clock, DollarSign, AlertTriangle, Award, Gift,
+  Bot, Building2, ChevronRight,
 } from 'lucide-react';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
 // ============================================================
-// HOME / DASHBOARD OVERVIEW PAGE
-// Server component — queries Supabase directly for real stats.
-// Shows: key metrics, recent opportunities, quick links.
+// DASHBOARD — GovTribe-style overview
+// Shows category counts + recent activity
 // ============================================================
 
 async function getDashboardStats() {
@@ -22,23 +22,32 @@ async function getDashboardStats() {
     const now = new Date().toISOString();
     const sevenDaysOut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
 
-    const [totalRes, urgentRes, newTodayRes, pipelineRes] = await Promise.all([
-      supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'active'),
+    const [
+      activeSamgov,
+      awardedUsaspending,
+      grantsTotal,
+      urgentRes,
+      pipelineRes,
+      grantsCountRes,
+    ] = await Promise.all([
+      supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'active').eq('source', 'federal_samgov'),
+      supabase.from('opportunities').select('id', { count: 'exact', head: true }).eq('status', 'awarded').eq('source', 'federal_usaspending'),
+      supabase.from('grants').select('id', { count: 'exact', head: true }),
       supabase.from('opportunities').select('id', { count: 'exact', head: true })
         .eq('status', 'active').gte('deadline', now).lte('deadline', sevenDaysOut),
-      supabase.from('opportunities').select('id', { count: 'exact', head: true })
-        .eq('status', 'active').gte('created_at', new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString()),
       supabase.from('pipeline_items').select('id', { count: 'exact', head: true }),
+      supabase.from('grants').select('id', { count: 'exact', head: true }),
     ]);
 
     return {
-      totalActive: totalRes.count ?? 0,
+      federalContractOpps: activeSamgov.count ?? 0,
+      federalAwards: awardedUsaspending.count ?? 0,
+      federalGrants: grantsCountRes.count ?? 0,
       urgentDeadlines: urgentRes.count ?? 0,
-      newToday: newTodayRes.count ?? 0,
       pipelineCount: pipelineRes.count ?? 0,
     };
   } catch {
-    return { totalActive: 0, urgentDeadlines: 0, newToday: 0, pipelineCount: 0 };
+    return { federalContractOpps: 0, federalAwards: 0, federalGrants: 0, urgentDeadlines: 0, pipelineCount: 0 };
   }
 }
 
@@ -47,9 +56,26 @@ async function getRecentOpportunities() {
     const supabase = createServerSupabaseClient();
     const { data } = await supabase
       .from('opportunities')
-      .select('id, title, agency_name, source, deadline, threshold_category, contract_type')
+      .select('id, title, agency_name, source, deadline, threshold_category, contract_type, status')
+      .eq('source', 'federal_samgov')
       .eq('status', 'active')
       .order('created_at', { ascending: false })
+      .limit(6);
+    return data ?? [];
+  } catch {
+    return [];
+  }
+}
+
+async function getTopAwards() {
+  try {
+    const supabase = createServerSupabaseClient();
+    const { data } = await supabase
+      .from('opportunities')
+      .select('id, title, agency_name, value_max, description, posted_date')
+      .eq('source', 'federal_usaspending')
+      .eq('status', 'awarded')
+      .order('value_max', { ascending: false })
       .limit(5);
     return data ?? [];
   } catch {
@@ -64,7 +90,7 @@ async function getUrgentOpportunities() {
     const sevenDaysOut = new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString();
     const { data } = await supabase
       .from('opportunities')
-      .select('id, title, agency_name, source, deadline, threshold_category')
+      .select('id, title, agency_name, deadline, threshold_category')
       .eq('status', 'active')
       .gte('deadline', now)
       .lte('deadline', sevenDaysOut)
@@ -76,124 +102,204 @@ async function getUrgentOpportunities() {
   }
 }
 
-function StatCard({
-  label, value, icon: Icon, color, href,
-}: {
-  label: string;
-  value: number | string;
-  icon: React.ElementType;
-  color: string;
-  href?: string;
-}) {
-  const content = (
-    <div className={`bg-white rounded-xl border border-gray-200 shadow-sm p-5 flex items-center gap-4 hover:shadow-md transition group`}>
-      <div className={`w-12 h-12 rounded-xl flex items-center justify-center flex-shrink-0 ${color}`}>
-        <Icon className="w-6 h-6" />
-      </div>
-      <div>
-        <p className="text-2xl font-bold text-gray-900">{value.toLocaleString()}</p>
-        <p className="text-sm text-gray-500">{label}</p>
-      </div>
-      {href && <ArrowRight className="w-4 h-4 text-gray-300 group-hover:text-blue-600 ml-auto transition" />}
-    </div>
-  );
-  return href ? <Link href={href}>{content}</Link> : content;
+function formatDollars(cents: number | null): string {
+  if (!cents) return '—';
+  const d = cents / 100;
+  if (d >= 1_000_000_000) return `$${(d / 1_000_000_000).toFixed(1)}B`;
+  if (d >= 1_000_000) return `$${(d / 1_000_000).toFixed(1)}M`;
+  if (d >= 1_000) return `$${(d / 1_000).toFixed(0)}K`;
+  return `$${d.toFixed(0)}`;
 }
 
-function SourceDot({ source }: { source: string }) {
-  let color = 'bg-gray-400';
-  if (source.startsWith('federal_')) color = 'bg-blue-500';
-  else if (source.startsWith('state_')) color = 'bg-purple-500';
-  else if (source.startsWith('local_')) color = 'bg-green-500';
-  else if (source.startsWith('education_')) color = 'bg-orange-500';
-  return <span className={`inline-block w-2 h-2 rounded-full flex-shrink-0 ${color}`} />;
+// GovTribe-style category card
+function CategoryCard({
+  label, count, sub, icon: Icon, href, color, bgColor,
+}: {
+  label: string;
+  count: number;
+  sub?: string;
+  icon: React.ElementType;
+  href: string;
+  color: string;
+  bgColor: string;
+}) {
+  return (
+    <Link href={href} className="group bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-blue-300 transition-all flex items-center gap-3">
+      <div className={`w-10 h-10 rounded-xl flex items-center justify-center flex-shrink-0 ${bgColor}`}>
+        <Icon className={`w-5 h-5 ${color}`} />
+      </div>
+      <div className="flex-1 min-w-0">
+        <p className="text-xl font-bold text-gray-900">{count.toLocaleString()}</p>
+        <p className="text-xs font-medium text-gray-700 truncate">{label}</p>
+        {sub && <p className="text-xs text-gray-400">{sub}</p>}
+      </div>
+      <ChevronRight className="w-4 h-4 text-gray-300 group-hover:text-blue-500 transition" />
+    </Link>
+  );
 }
 
 export default async function DashboardPage() {
-  const [stats, recent, urgent] = await Promise.all([
+  const [stats, recent, urgent, topAwards] = await Promise.all([
     getDashboardStats(),
     getRecentOpportunities(),
     getUrgentOpportunities(),
+    getTopAwards(),
   ]);
 
   return (
     <div className="space-y-6 max-w-7xl mx-auto">
-      {/* Page header */}
-      <div>
-        <h1 className="text-2xl font-bold text-gray-900">Dashboard</h1>
-        <p className="text-gray-500 text-sm mt-1">
-          Pittsburgh-area government contracts, grants, and opportunities — all in one place.
-        </p>
+      {/* Header */}
+      <div className="flex items-center justify-between">
+        <div>
+          <h1 className="text-2xl font-bold text-gray-900">Pittsburgh GovCon Intelligence</h1>
+          <p className="text-gray-500 text-sm mt-1">
+            Federal contracts, awards, grants, and opportunities — all in one place.
+          </p>
+        </div>
+        <Link
+          href="/assistant"
+          className="hidden sm:flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-700 transition"
+        >
+          <Bot className="w-4 h-4" />
+          Ask GovCon AI
+        </Link>
       </div>
 
-      {/* Stat cards */}
-      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard
-          label="Active Opportunities"
-          value={stats.totalActive}
+      {/* Category counts — GovTribe search result style */}
+      <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+        <CategoryCard
+          label="Federal Contract Opportunities"
+          count={stats.federalContractOpps}
+          sub="Active solicitations · SAM.gov"
           icon={FileSearch}
-          color="bg-blue-100 text-blue-600"
           href="/contracts"
+          color="text-blue-600"
+          bgColor="bg-blue-50"
         />
-        <StatCard
-          label="Due Within 7 Days"
-          value={stats.urgentDeadlines}
+        <CategoryCard
+          label="Federal Contract Awards"
+          count={stats.federalAwards}
+          sub="Awarded contracts · USASpending"
+          icon={Award}
+          href="/awards"
+          color="text-green-600"
+          bgColor="bg-green-50"
+        />
+        <CategoryCard
+          label="Federal Grant Opportunities"
+          count={stats.federalGrants}
+          sub="Grants available · Multiple sources"
+          icon={Gift}
+          href="/grants"
+          color="text-purple-600"
+          bgColor="bg-purple-50"
+        />
+        <CategoryCard
+          label="Urgent Deadlines"
+          count={stats.urgentDeadlines}
+          sub="Due within 7 days"
           icon={AlertTriangle}
-          color="bg-red-100 text-red-600"
-          href="/contracts?deadline_before=&sort=deadline:asc"
-        />
-        <StatCard
-          label="Added Today"
-          value={stats.newToday}
-          icon={TrendingUp}
-          color="bg-green-100 text-green-600"
-          href="/contracts?sort=posted_date:desc"
-        />
-        <StatCard
-          label="In Your Pipeline"
-          value={stats.pipelineCount}
-          icon={KanbanSquare}
-          color="bg-purple-100 text-purple-600"
-          href="/pipeline"
+          href="/contracts?sort=deadline:asc"
+          color="text-red-600"
+          bgColor="bg-red-50"
         />
       </div>
 
-      {/* Two-column: recent + urgent */}
+      {/* Main content grid */}
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-        {/* Recent opportunities */}
+        {/* Recent Active Solicitations */}
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
             <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
-              <Clock className="w-4 h-4 text-blue-600" />
-              Recently Added
+              <FileSearch className="w-4 h-4 text-blue-600" />
+              Recent Federal Solicitations
             </h2>
-            <Link href="/contracts?sort=posted_date:desc" className="text-xs text-blue-600 hover:underline">
-              View all →
+            <Link href="/contracts" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+              {stats.federalContractOpps.toLocaleString()} total <ArrowRight className="w-3 h-3" />
             </Link>
           </div>
           <ul className="divide-y divide-gray-50">
             {recent.length === 0 ? (
               <li className="px-5 py-8 text-center text-sm text-gray-400">
-                No opportunities yet. Run the ingestion pipeline to populate data.
+                No active solicitations. Run ingestion to populate.
               </li>
             ) : (
               recent.map((opp) => (
-                <li key={opp.id} className="px-5 py-3 hover:bg-gray-50 transition">
-                  <Link href={`/contracts/${opp.id}`} className="flex items-start gap-2 group">
-                    <SourceDot source={opp.source} />
-                    <div className="min-w-0">
+                <li key={opp.id} className="hover:bg-gray-50 transition">
+                  <Link href={`/contracts/${opp.id}`} className="flex items-start gap-3 px-5 py-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-blue-500 mt-1.5 flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
                       <p className="text-sm font-medium text-gray-900 group-hover:text-blue-600 line-clamp-1 transition">
                         {opp.title}
                       </p>
-                      <p className="text-xs text-gray-500 mt-0.5 line-clamp-1">{opp.agency_name}</p>
+                      <p className="text-xs text-gray-500 mt-0.5">{opp.agency_name}</p>
                     </div>
+                    {opp.deadline && (
+                      <p className="text-xs text-gray-400 flex-shrink-0">
+                        {new Date(opp.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </Link>
                 </li>
               ))
             )}
           </ul>
+          <div className="px-5 py-3 border-t border-gray-50">
+            <Link href="/contracts" className="text-xs text-blue-600 hover:underline">
+              Browse all {stats.federalContractOpps.toLocaleString()} solicitations →
+            </Link>
+          </div>
         </section>
 
+        {/* Top Federal Contract Awards */}
+        <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
+          <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
+            <h2 className="text-sm font-bold text-gray-900 flex items-center gap-2">
+              <DollarSign className="w-4 h-4 text-green-600" />
+              Top Federal Contract Awards
+            </h2>
+            <Link href="/awards" className="text-xs text-blue-600 hover:underline flex items-center gap-1">
+              {stats.federalAwards.toLocaleString()} total <ArrowRight className="w-3 h-3" />
+            </Link>
+          </div>
+          <ul className="divide-y divide-gray-50">
+            {topAwards.length === 0 ? (
+              <li className="px-5 py-8 text-center text-sm text-gray-400">
+                No awards data yet.
+              </li>
+            ) : (
+              topAwards.map((award) => {
+                const recipientMatch = award.description?.match(/Awarded to:\s*([^.]+)/i);
+                const recipient = recipientMatch?.[1]?.trim() ?? '—';
+                return (
+                  <li key={award.id} className="hover:bg-gray-50 transition">
+                    <Link href="/awards" className="flex items-start gap-3 px-5 py-3 group">
+                      <div className="w-1.5 h-1.5 rounded-full bg-green-500 mt-1.5 flex-shrink-0" />
+                      <div className="min-w-0 flex-1">
+                        <p className="text-sm font-medium text-gray-900 group-hover:text-green-700 line-clamp-1 transition">
+                          {award.title}
+                        </p>
+                        <p className="text-xs text-blue-600 truncate">{recipient}</p>
+                      </div>
+                      <p className="text-xs font-bold text-gray-700 flex-shrink-0">
+                        {formatDollars(award.value_max)}
+                      </p>
+                    </Link>
+                  </li>
+                );
+              })
+            )}
+          </ul>
+          <div className="px-5 py-3 border-t border-gray-50">
+            <Link href="/awards" className="text-xs text-blue-600 hover:underline">
+              Browse all {stats.federalAwards.toLocaleString()} awards →
+            </Link>
+          </div>
+        </section>
+      </div>
+
+      {/* Urgent deadlines + Pipeline */}
+      <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Urgent deadlines */}
         <section className="bg-white rounded-xl border border-gray-200 shadow-sm overflow-hidden">
           <div className="px-5 py-4 border-b border-gray-100 flex items-center justify-between">
@@ -201,54 +307,60 @@ export default async function DashboardPage() {
               <AlertTriangle className="w-4 h-4 text-red-500" />
               Deadlines This Week
             </h2>
-            <Link href="/contracts?sort=deadline:asc" className="text-xs text-blue-600 hover:underline">
-              View all →
-            </Link>
+            <Link href="/contracts?sort=deadline:asc" className="text-xs text-blue-600 hover:underline">View all →</Link>
           </div>
           <ul className="divide-y divide-gray-50">
             {urgent.length === 0 ? (
-              <li className="px-5 py-8 text-center text-sm text-gray-400">
-                No urgent deadlines this week.
-              </li>
+              <li className="px-5 py-8 text-center text-sm text-gray-400">No urgent deadlines this week.</li>
             ) : (
               urgent.map((opp) => (
-                <li key={opp.id} className="px-5 py-3 hover:bg-gray-50 transition">
-                  <Link href={`/contracts/${opp.id}`} className="flex items-start gap-2 group">
-                    <SourceDot source={opp.source} />
+                <li key={opp.id} className="hover:bg-gray-50 transition">
+                  <Link href={`/contracts/${opp.id}`} className="flex items-center gap-3 px-5 py-3 group">
+                    <div className="w-1.5 h-1.5 rounded-full bg-red-500 flex-shrink-0" />
                     <div className="min-w-0 flex-1">
-                      <p className="text-sm font-medium text-gray-900 group-hover:text-red-600 line-clamp-1 transition">
-                        {opp.title}
-                      </p>
-                      {opp.deadline && (
-                        <p className="text-xs text-red-500 font-medium mt-0.5">
-                          Due {new Date(opp.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
-                        </p>
-                      )}
+                      <p className="text-sm font-medium text-gray-900 group-hover:text-red-600 line-clamp-1 transition">{opp.title}</p>
+                      <p className="text-xs text-gray-400">{opp.agency_name}</p>
                     </div>
+                    {opp.deadline && (
+                      <p className="text-xs font-bold text-red-500 flex-shrink-0">
+                        {new Date(opp.deadline).toLocaleDateString('en-US', { month: 'short', day: 'numeric' })}
+                      </p>
+                    )}
                   </Link>
                 </li>
               ))
             )}
           </ul>
         </section>
-      </div>
 
-      {/* Quick actions */}
-      <section className="bg-gradient-to-r from-blue-600 to-blue-700 rounded-xl p-6 flex flex-col sm:flex-row items-center justify-between gap-4">
-        <div>
-          <h2 className="text-white font-bold text-lg">Find Your Next Win</h2>
-          <p className="text-blue-200 text-sm mt-1">
-            Search and filter all Pittsburgh-area opportunities from federal, state, and local sources.
-          </p>
-        </div>
-        <Link
-          href="/contracts"
-          className="flex items-center gap-2 bg-white text-blue-700 font-semibold text-sm px-5 py-3 rounded-lg hover:bg-blue-50 transition flex-shrink-0"
-        >
-          <FileSearch className="w-4 h-4" />
-          Browse Contracts
-        </Link>
-      </section>
+        {/* AI Assistant CTA */}
+        <section className="bg-gradient-to-br from-[#0f1e35] to-[#1a3a60] rounded-xl p-6 flex flex-col justify-between min-h-[200px]">
+          <div>
+            <div className="w-10 h-10 rounded-xl bg-blue-600 flex items-center justify-center mb-3">
+              <Bot className="w-5 h-5 text-white" />
+            </div>
+            <h2 className="text-white font-bold text-lg">GovCon AI Assistant</h2>
+            <p className="text-blue-300 text-sm mt-1.5">
+              Ask about Pittsburgh-area contracts, vendors, agencies, bidding strategies, or get a daily briefing on new opportunities.
+            </p>
+          </div>
+          <div className="flex gap-3 mt-4">
+            <Link
+              href="/assistant"
+              className="flex items-center gap-2 bg-blue-600 text-white text-sm font-semibold px-4 py-2.5 rounded-xl hover:bg-blue-500 transition"
+            >
+              <Bot className="w-4 h-4" />
+              Open AI Assistant
+            </Link>
+            <Link
+              href="/assistant?prompt=Give+me+a+briefing+on+new+Pittsburgh+federal+contracts+today"
+              className="flex items-center gap-2 bg-white/10 text-white text-sm font-medium px-4 py-2.5 rounded-xl hover:bg-white/20 transition border border-white/20"
+            >
+              Daily Briefing
+            </Link>
+          </div>
+        </section>
+      </div>
     </div>
   );
 }
