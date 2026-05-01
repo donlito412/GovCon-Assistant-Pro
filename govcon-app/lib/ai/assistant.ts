@@ -6,7 +6,7 @@ import Anthropic from '@anthropic-ai/sdk';
 import { buildSystemPrompt, type AssistantContext } from './prompts';
 import { TOOL_DEFINITIONS, executeTool } from './tools';
 
-const MODEL = 'claude-sonnet-4-5'; // claude-sonnet-4-6 maps to claude-sonnet-4-5 in SDK
+const MODEL = 'claude-sonnet-4-6';
 
 export interface ChatMessage {
   role: 'user' | 'assistant';

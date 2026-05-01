@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/assistant — streaming chat endpoint
 // Accepts: { messages, conversationId?, context?, saveHistory? }
@@ -12,9 +14,10 @@ import type { AssistantContext } from '@/lib/ai/prompts';
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest): Promise<NextResponse | Response> {
+  // Single-user personal tool — auth not required
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id ?? 'local';
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -29,7 +32,7 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
   // Save conversation (async, non-blocking)
   if (saveHistory && messages.length > 0) {
     const title = messages[0]?.content?.slice(0, 60) ?? 'Conversation';
-    saveConversation(user.id, conversationId, messages, title, context).catch(() => {});
+    saveConversation(userId, conversationId, messages, title, context).catch(() => {});
   }
 
   const stream = await streamChatResponse(messages, context);
@@ -47,18 +50,18 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
 // GET — list conversations
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  const { data: { user } } = await supabase.auth.getUser();
+  const userId = user?.id ?? 'local';
 
   const { listConversations, loadConversation } = await import('../../../lib/ai/assistant');
   const { searchParams } = new URL(req.url);
   const loadId = searchParams.get('load');
 
   if (loadId) {
-    const messages = await loadConversation(user.id, parseInt(loadId));
+    const messages = await loadConversation(userId, parseInt(loadId));
     return NextResponse.json({ messages });
   }
 
-  const conversations = await listConversations(user.id);
+  const conversations = await listConversations(userId);
   return NextResponse.json({ conversations });
 }
