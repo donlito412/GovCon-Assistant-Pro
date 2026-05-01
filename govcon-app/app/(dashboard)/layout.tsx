@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import {
   LayoutDashboard, FileSearch, KanbanSquare, Bell,
-  BarChart3, Building2, Users, Menu,
+  BarChart3, Building2, Users, Menu, Bot,
 } from 'lucide-react';
 
 // ============================================================
@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { href: '/',              label: 'Dashboard',     icon: LayoutDashboard },
   { href: '/contracts',     label: 'Contracts',     icon: FileSearch },
   { href: '/pipeline',      label: 'Pipeline',      icon: KanbanSquare },
+  { href: '/assistant',     label: 'AI Assistant',  icon: Bot },
   { href: '/saved-searches',label: 'Saved Searches',icon: Bell },
   { href: '/analytics',     label: 'Analytics',     icon: BarChart3 },
   { href: '/agencies',      label: 'Agencies',      icon: Building2 },
