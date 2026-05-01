@@ -1,4 +1,6 @@
 'use client';
+export const dynamic = 'force-dynamic';
+
 
 import React, { useState } from 'react';
 import { Loader2, AlertCircle, Handshake, Plus, RefreshCw } from 'lucide-react';

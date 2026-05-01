@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/community/teaming — list open teaming posts
 // POST /api/community/teaming — create teaming post

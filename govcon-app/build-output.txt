@@ -1,0 +1,105 @@
+
+> govcon-assistant-pro@0.1.0 build
+> next build
+
+  ▲ Next.js 14.2.7
+
+   Creating an optimized production build ...
+ ✓ Compiled successfully
+   Linting and checking validity of types ...
+   Collecting page data ...
+   Generating static pages (0/22) ...
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/login". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at o (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:10524)
+    at d (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:21430)
+    at v (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(auth)/login/page.js:11:286)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+
+Error occurred prerendering page "/login". Read more: https://nextjs.org/docs/messages/prerender-error
+
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/assistant". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at o (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:10524)
+    at d (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:21430)
+    at iI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(dashboard)/assistant/page.js:25:1297)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+
+Error occurred prerendering page "/assistant". Read more: https://nextjs.org/docs/messages/prerender-error
+
+   Generating static pages (5/22) 
+   Generating static pages (10/22) 
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/saved-searches". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at o (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:10524)
+    at d (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:21430)
+    at Z (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(dashboard)/saved-searches/page.js:7:3143)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nB (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:67538)
+    at nD (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:66680)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64853)
+    at nB (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:67538)
+
+Error occurred prerendering page "/saved-searches". Read more: https://nextjs.org/docs/messages/prerender-error
+
+ ⨯ useSearchParams() should be wrapped in a suspense boundary at page "/contracts". Read more: https://nextjs.org/docs/messages/missing-suspense-with-csr-bailout
+    at o (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:10524)
+    at d (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/4471.js:1:21430)
+    at E (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(dashboard)/contracts/page.js:16:16591)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+
+Error occurred prerendering page "/contracts". Read more: https://nextjs.org/docs/messages/prerender-error
+
+Error: either NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY env variables or supabaseUrl and supabaseKey are required!
+    at c (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/9368.js:1:1010)
+    at H (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(dashboard)/settings/page.js:22:8288)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nB (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:67538) {
+  digest: '805894478'
+}
+
+Error occurred prerendering page "/settings". Read more: https://nextjs.org/docs/messages/prerender-error
+
+Error: either NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY env variables or supabaseUrl and supabaseKey are required!
+    at c (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/chunks/9368.js:1:1010)
+    at H (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/.next/server/app/(dashboard)/settings/page.js:22:8288)
+    at nj (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:46251)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47571)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nI (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47010)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:47717)
+    at nM (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:61546)
+    at nN (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:64546)
+    at nB (/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts/govcon-app/node_modules/next/dist/compiled/next-server/app-page.runtime.prod.js:12:67538)
+   Generating static pages (16/22) 
+ ✓ Generating static pages (22/22)
+
+> Export encountered errors on following paths:
+	/(auth)/login/page: /login
+	/(dashboard)/assistant/page: /assistant
+	/(dashboard)/contracts/page: /contracts
+	/(dashboard)/saved-searches/page: /saved-searches
+	/(dashboard)/settings/page: /settings

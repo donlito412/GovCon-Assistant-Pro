@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/community/profiles/me — current user's own profile
 // (Returns 404 if not yet created)

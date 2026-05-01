@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/agencies/[id]
 // Agency detail + pre-computed stats:

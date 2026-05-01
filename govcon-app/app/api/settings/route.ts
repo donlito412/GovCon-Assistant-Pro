@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/settings — fetch user settings record
 // PATCH /api/settings — update user settings

@@ -63,8 +63,9 @@ export async function scrapeEventbrite(): Promise<EventIngestionResult> {
   while (page <= MAX_PAGES) {
     try {
       const params = new URLSearchParams({
+        'q':                        'government OR procurement OR contract',
         'location.address':         'Pittsburgh, PA',
-        'location.within':          '30mi',
+        'location.within':          '25mi',
         'categories':               '101',  // Business & Professional Eventbrite category
         'start_date.range_start':   new Date().toISOString().split('.')[0] + 'Z',
         'expand':                   'venue,organizer,ticket_classes',

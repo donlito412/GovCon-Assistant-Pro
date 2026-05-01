@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/pipeline  — fetch all pipeline items (with joined opportunity)
 // POST /api/pipeline  — add an opportunity to the pipeline

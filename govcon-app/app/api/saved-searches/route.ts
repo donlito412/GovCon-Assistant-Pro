@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/saved-searches — list all saved searches
 // POST /api/saved-searches — create a new saved search

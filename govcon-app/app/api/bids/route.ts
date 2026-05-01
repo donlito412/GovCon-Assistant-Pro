@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/bids — list bid records
 // POST /api/bids — create bid record

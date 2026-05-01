@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET/POST /api/ingest/community — PA Corps weekly ingestion
 // Cron: Sundays 14:00 UTC

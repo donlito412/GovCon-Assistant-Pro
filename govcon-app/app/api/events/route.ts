@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/events — query events with filtering + pagination
 // Params: q, source, event_type, why_relevant, is_virtual,

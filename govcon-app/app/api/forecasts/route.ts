@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/forecasts — forecast opportunities query
 // Filters: q, naics, agency, status, days, min_value, sort, page

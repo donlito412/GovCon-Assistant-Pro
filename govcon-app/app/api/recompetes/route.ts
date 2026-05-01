@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/recompetes — expiring contracts query
 // Filters: days, naics, agency, min_value, max_value, sort, page

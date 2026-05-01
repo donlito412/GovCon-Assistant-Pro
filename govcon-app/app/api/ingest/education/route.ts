@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/ingest/education
 // Runs all 5 education scrapers in parallel, upserts to Supabase.
@@ -17,6 +19,38 @@ import type { ScrapedOpportunity } from '@/lib/ingestion/shared/normalize_educat
 
 const INGEST_SECRET = process.env.INGEST_SECRET ?? '';
 const UPSERT_BATCH  = 50;
+const SCRAPER_TIMEOUT_MS = 8_000; // 8 seconds per scraper to avoid Vercel 10s limit
+
+/**
+ * Wraps a scraper function with a timeout to prevent Vercel function timeout.
+ * If the scraper times out, returns an empty result instead of blocking all scrapers.
+ */
+async function scrapeWithTimeout<T extends { source: string; opportunities: any[]; errors: string[]; durationMs: number }>(
+  scraperFn: () => Promise<T>,
+  sourceName: string
+): Promise<T> {
+  const start = Date.now();
+  try {
+    const timeoutPromise = new Promise<never>((_, reject) => {
+      setTimeout(() => reject(new Error(`Scraper timeout after ${SCRAPER_TIMEOUT_MS}ms`)), SCRAPER_TIMEOUT_MS);
+    });
+
+    const result = await Promise.race([scraperFn(), timeoutPromise]);
+    const durationMs = Date.now() - start;
+    console.log(`[ingest/education] ${sourceName} completed in ${durationMs}ms (${result.opportunities.length} opportunities)`);
+    return { ...result, durationMs };
+  } catch (error) {
+    const durationMs = Date.now() - start;
+    const errorMsg = error instanceof Error ? error.message : String(error);
+    console.warn(`[ingest/education] ${sourceName} failed after ${durationMs}ms: ${errorMsg}`);
+    return {
+      source: sourceName,
+      opportunities: [],
+      errors: [errorMsg],
+      durationMs,
+    } as unknown as T;
+  }
+}
 
 async function upsertBatch(
   supabase: ReturnType<typeof createServerSupabaseClient>,
@@ -100,13 +134,14 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
 
   console.log('[ingest/education] Starting all scrapers…');
 
-  // Run all 5 scrapers in parallel — one failure doesn't block others
+  // Run all 5 scrapers in parallel with timeout guards — one failure doesn't block others
+  console.log('[ingest/education] Starting all scrapers with timeout guards...');
   const [pittResult, cmuResult, ccacResult, pghSchoolsResult, duqResult] = await Promise.allSettled([
-    scrapePitt(),
-    scrapeCmu(),
-    scrapeCcac(),
-    scrapePghSchools(),
-    scrapeDuquesne(),
+    scrapeWithTimeout(() => scrapePitt(), 'education_pitt'),
+    scrapeWithTimeout(() => scrapeCmu(), 'education_cmu'),
+    scrapeWithTimeout(() => scrapeCcac(), 'education_ccac'),
+    scrapeWithTimeout(() => scrapePghSchools(), 'education_pgh_schools'),
+    scrapeWithTimeout(() => scrapeDuquesne(), 'education_duquesne'),
   ]);
 
   const results = [pittResult, cmuResult, ccacResult, pghSchoolsResult, duqResult].map((r) =>

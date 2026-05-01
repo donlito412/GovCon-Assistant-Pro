@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/grants
 // Queryable grants endpoint with filtering, sorting, pagination.

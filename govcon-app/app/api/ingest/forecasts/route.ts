@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET/POST /api/ingest/forecasts — daily forecast ingestion
 // Cron: 30 6 * * * (06:30 UTC daily)

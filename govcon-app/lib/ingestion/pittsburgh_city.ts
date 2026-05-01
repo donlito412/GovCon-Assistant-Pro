@@ -25,14 +25,24 @@ const FETCH_TIMEOUT_MS = 30_000;
 // Primary: OpenGov portal for City of Pittsburgh
 const OPENGOV_URL = 'https://procurement.opengov.com/portal/pittsburghpa';
 
-// Fallback: OMB/Solicitations direct page
-const FALLBACK_URL = 'https://pittsburghpa.gov/omb/solicitations';
+// Fallback 1: Pittsburgh Finance Department bids page
+const FINANCE_URL = 'https://pittsburghpa.gov/finance/bids-rfps';
+
+// Fallback 2: Updated OpenGov procurement URL
+const OPENGOV_ALT = 'https://www.opengov.com/procurement-portal/pittsburghpa';
 
 const HEADERS = {
   'User-Agent':
-    'GovConAssistantBot/1.0 (+https://github.com/donlito412/GovCon-Assistant-Pro; research/data-aggregation)',
-  Accept: 'text/html,application/xhtml+xml,application/json',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Upgrade-Insecure-Requests': '1',
 };
 
 async function fetchHtml(url: string): Promise<string> {
@@ -205,6 +215,68 @@ function parseOpenGovHtml(html: string): Array<{
 }
 
 /**
+ * Parses the Pittsburgh Finance Department bids and RFPs page.
+ */
+function parseFinanceHtml(html: string): Array<{
+  number: string;
+  title: string;
+  department: string;
+  type: string;
+  deadline: string;
+  posted: string;
+  url: string;
+}> {
+  const $ = cheerio.load(html);
+  const results: Array<{
+    number: string;
+    title: string;
+    department: string;
+    type: string;
+    deadline: string;
+    posted: string;
+    url: string;
+  }> = [];
+
+  // Finance department page typically uses lists or tables for procurement opportunities
+  $('ul li, table tr, .procurement-item, .bid-item, .rfp-item').each((i, el) => {
+    const $el = $(el);
+    if (el.tagName === 'tr' && i === 0) return; // skip header row
+
+    const $link = $el.find('a').first();
+    const title = $link.text().trim() || $el.text().trim();
+    if (!title || title.length < 10) return; // skip very short entries
+
+    const href = $link.attr('href') || '';
+    const url = href.startsWith('http')
+      ? href
+      : href
+      ? `https://pittsburghpa.gov${href.startsWith('/') ? '' : '/'}${href}`
+      : FINANCE_URL;
+
+    // Try to extract solicitation number from title
+    const solNumMatch = title.match(/(\d{4}-\d+|RFP-\d+|BID-\d+|SOL-\d+|IFB-\d+)/i);
+    const number = solNumMatch ? solNumMatch[1] : '';
+
+    // Try to extract dates from surrounding text
+    const text = $el.text();
+    const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\w+ \d{1,2},\s*\d{4})/);
+    const deadline = dateMatch ? dateMatch[1] : '';
+
+    results.push({
+      number,
+      title,
+      department: 'City of Pittsburgh - Finance Department',
+      type: 'RFP/Bid',
+      deadline,
+      posted: '',
+      url,
+    });
+  });
+
+  return results;
+}
+
+/**
  * Parses the City of Pittsburgh OMB solicitations fallback page.
  */
 function parseFallbackHtml(html: string): Array<{
@@ -241,7 +313,7 @@ function parseFallbackHtml(html: string): Array<{
       ? href
       : href
       ? `https://pittsburghpa.gov${href.startsWith('/') ? '' : '/'}${href}`
-      : FALLBACK_URL;
+      : FINANCE_URL;
 
     // Try to extract a date from surrounding text
     const rowText = $el.text();
@@ -299,16 +371,44 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
     errors.push(msg);
   }
 
-  // Attempt 3: Fallback OMB page
+  // Attempt 3: Try alternative OpenGov URL
   if (parsedItems.length === 0) {
-    console.log('[pittsburgh_city] Trying fallback OMB solicitations page...');
+    console.log('[pittsburgh_city] Trying alternative OpenGov URL...');
     try {
-      const fallbackHtml = await fetchHtml(FALLBACK_URL);
-      parsedItems = parseFallbackHtml(fallbackHtml);
-      console.log(`[pittsburgh_city] Fallback page: found ${parsedItems.length} item(s).`);
+      const altHtml = await fetchHtml(OPENGOV_ALT);
+      parsedItems = parseOpenGovHtml(altHtml);
+      console.log(`[pittsburgh_city] OpenGov Alt: found ${parsedItems.length} item(s).`);
     } catch (err) {
-      const msg = `Fallback page fetch failed: ${err instanceof Error ? err.message : String(err)}`;
-      console.error(`[pittsburgh_city] ${msg}`);
+      const msg = `OpenGov Alt fetch failed: ${err instanceof Error ? err.message : String(err)}`;
+      console.warn(`[pittsburgh_city] ${msg}`);
+      errors.push(msg);
+    }
+  }
+
+  // Attempt 4: Try Finance Department page
+  if (parsedItems.length === 0) {
+    console.log('[pittsburgh_city] Trying Finance Department bids page...');
+    try {
+      const financeHtml = await fetchHtml(FINANCE_URL);
+      parsedItems = parseFinanceHtml(financeHtml);
+      console.log(`[pittsburgh_city] Finance page: found ${parsedItems.length} item(s).`);
+    } catch (err) {
+      const msg = `Finance Department fetch failed: ${err instanceof Error ? err.message : String(err)}`;
+      console.warn(`[pittsburgh_city] ${msg}`);
+      errors.push(msg);
+    }
+  }
+
+  // Attempt 5: Legacy OMB fallback (if it exists)
+  if (parsedItems.length === 0) {
+    console.log('[pittsburgh_city] Trying legacy OMB solicitations page...');
+    try {
+      const fallbackHtml = await fetchHtml('https://pittsburghpa.gov/omb/solicitations');
+      parsedItems = parseFallbackHtml(fallbackHtml);
+      console.log(`[pittsburgh_city] Legacy OMB: found ${parsedItems.length} item(s).`);
+    } catch (err) {
+      const msg = `Legacy OMB fetch failed: ${err instanceof Error ? err.message : String(err)}`;
+      console.warn(`[pittsburgh_city] ${msg}`);
       errors.push(msg);
     }
   }

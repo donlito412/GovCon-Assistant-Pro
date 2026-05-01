@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/analytics
 // Single aggregation call — returns all dashboard data.

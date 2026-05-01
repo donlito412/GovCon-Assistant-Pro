@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/agencies/[id]/awards
 // Fetches past contract awards from USASpending.gov for an agency.

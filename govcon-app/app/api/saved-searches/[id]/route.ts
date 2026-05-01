@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // PATCH  /api/saved-searches/[id] — update name or alert_enabled
 // DELETE /api/saved-searches/[id] — delete saved search

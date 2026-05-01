@@ -57,27 +57,81 @@ interface RawBid {
   isPublicWorks: boolean;
 }
 
+// Keywords that must appear in a title for it to be considered a procurement opportunity.
+// This prevents website navigation links from being mistaken for bids.
+const PROCUREMENT_KEYWORDS = [
+  'bid', 'rfp', 'rfq', 'rfi', 'proposal', 'solicitation', 'contract',
+  'purchase', 'procurement', 'quote', 'invitation', 'ifb', 'award',
+  'supply', 'service', 'construction', 'renovation', 'project',
+  'maintenance', 'repair', 'install', 'design', 'engineering', 'professional',
+];
+
+// Terms that definitively indicate a navigation link, not a procurement item.
+const NAV_BLOCKLIST = [
+  'court records', 'criminal records', 'civil and family', 'wills and orphans',
+  'court of common pleas', 'public defender', 'district attorney',
+  'careers portal', 'information for applicants', 'job opportunities',
+  'employment related', 'human resources', 'retirement office', 'internships',
+  'benefits for allegheny', 'working for allegheny', 'county assistance',
+  'children and families', 'health department', 'health services',
+  'veterans services', 'veterans benefits', 'senior', 'elder abuse',
+  'housing and shelter', 'food assistance', 'legal assistance',
+  'permits and licenses', 'marriage license', 'dog license', 'passport',
+  'property assessments', 'real estate portal', 'tax abatements',
+  'parks and events', 'golf courses', 'swimming', 'skiing', 'playground',
+  'boyce park', 'north park', 'south park', 'special events calendar',
+  'movies under the stars', 'wine and spirits', 'submit a concern',
+  'dhs ', 'disability and autism', 'behavioral health', 'overdose prevention',
+  'air quality', 'immunization', 'plumbing permit', 'road and bridge',
+  'lgbtq', 'immigrants and internationals', 'opioid settlement',
+];
+
+/**
+ * Returns true if the title looks like a real procurement opportunity.
+ * Rejects navigation links, HR pages, social services, and park info.
+ */
+function isProcurementTitle(title: string): boolean {
+  const lower = title.toLowerCase();
+
+  // Reject if title matches any nav blocklist term
+  for (const blocked of NAV_BLOCKLIST) {
+    if (lower.includes(blocked)) return false;
+  }
+
+  // Reject very long titles — these are concatenated nav menu items
+  if (title.length > 200) return false;
+
+  // Accept if title contains a procurement keyword
+  for (const kw of PROCUREMENT_KEYWORDS) {
+    if (lower.includes(kw)) return true;
+  }
+
+  // Accept if title looks like a bid number pattern (e.g. "2024-001-P")
+  if (/\b\d{4}-\d{3,}/i.test(title)) return true;
+
+  return false;
+}
+
 /**
  * Parses an Allegheny County bids/proposals page.
  * Both purchasing and public works use a similar table layout.
+ * NOTE: Only the structured table parser is used — the old fallback that
+ * scraped <li> elements was picking up website navigation and has been removed.
  */
 function parseBidsPage(html: string, sourceUrl: string, isPublicWorks: boolean): RawBid[] {
   const $ = cheerio.load(html);
   const bids: RawBid[] = [];
 
-  // Allegheny County uses a <table> or <div>-based layout for their bid listings
-  // Try table rows first
-  let found = false;
-
+  // Allegheny County uses a <table> layout for bid listings
   $('table tr, .bid-row, .solicitation-row').each((i, row) => {
     const cells = $(row).find('td');
     if (cells.length < 2) return;
 
     // Skip header rows
-    const firstCellText = $(cells[0]).text().trim();
+    const firstCellText = $(cells[0]).text().trim().toLowerCase();
     if (
-      firstCellText.toLowerCase().includes('bid number') ||
-      firstCellText.toLowerCase().includes('solicitation') ||
+      firstCellText.includes('bid number') ||
+      firstCellText.includes('solicitation') ||
       !firstCellText
     ) return;
 
@@ -85,7 +139,9 @@ function parseBidsPage(html: string, sourceUrl: string, isPublicWorks: boolean):
     const title = $(cells[1]).text().trim();
     if (!title) return;
 
-    found = true;
+    // Hard gate: skip anything that doesn't look like a real procurement item
+    if (!isProcurementTitle(title) && !isProcurementTitle(bidNumber)) return;
+
     const department = cells.length > 2 ? $(cells[2]).text().trim() : 'Allegheny County';
     const openDate = cells.length > 3 ? $(cells[3]).text().trim() : '';
     const dueDate = cells.length > 4 ? $(cells[4]).text().trim() : $(cells[cells.length - 1]).text().trim();
@@ -104,34 +160,31 @@ function parseBidsPage(html: string, sourceUrl: string, isPublicWorks: boolean):
     bids.push({ bidNumber, title, department, dueDate, openDate, contact, detailUrl, isPublicWorks });
   });
 
-  // Fallback: parse any <li> or <p> elements that look like solicitation entries
-  if (!found) {
-    $('ul li, .field-item p').each((_, el) => {
-      const text = $(el).text().trim();
-      if (!text || text.length < 10) return;
-
-      const link = $(el).find('a').attr('href') || '';
-      const linkText = $(el).find('a').text().trim();
-      const detailUrl = link.startsWith('http')
-        ? link
-        : link
-        ? `https://www.alleghenycounty.us${link}`
-        : sourceUrl;
-
-      if (linkText) {
-        bids.push({
-          bidNumber: '',
-          title: linkText,
-          department: 'Allegheny County',
-          dueDate: '',
-          openDate: '',
-          contact: '',
-          detailUrl,
-          isPublicWorks,
-        });
-      }
-    });
-  }
+  // Also try links that point to PDF advertisements (common for Allegheny County bids)
+  $('a[href]').each((_, el) => {
+    const href = $(el).attr('href') || '';
+    const linkText = $(el).text().trim();
+    // Only grab PDF or solicitation links that look like procurement
+    if (
+      (href.toLowerCase().includes('.pdf') || href.toLowerCase().includes('solicitation')) &&
+      linkText.length > 5 &&
+      isProcurementTitle(linkText)
+    ) {
+      const detailUrl = href.startsWith('http')
+        ? href
+        : `https://www.alleghenycounty.us${href.startsWith('/') ? '' : '/'}${href}`;
+      bids.push({
+        bidNumber: '',
+        title: linkText,
+        department: 'Allegheny County',
+        dueDate: '',
+        openDate: '',
+        contact: '',
+        detailUrl,
+        isPublicWorks,
+      });
+    }
+  });
 
   return bids;
 }

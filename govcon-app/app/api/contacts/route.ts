@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/contacts — list user's saved contacts
 // POST /api/contacts — save a new contact (requires Jon's approval upstream)

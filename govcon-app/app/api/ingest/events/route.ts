@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/ingest/events
 // Runs all 6 event sources in parallel, upserts to Supabase events table.

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/assistant/analyze-document
 // Accepts: multipart/form-data with file (PDF ≤20MB)

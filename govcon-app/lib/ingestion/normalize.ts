@@ -167,7 +167,7 @@ export function computeDedupHash(
 
 /**
  * Returns true if the SAM.gov opportunity's place of performance is in the Pittsburgh area.
- * Checks: zip code, county name, city name (Pittsburgh), state=PA.
+ * Expanded criteria for better coverage: zip code, county name, major Pittsburgh cities, state=PA.
  * SAM.gov does not filter by zip natively — we apply this filter post-fetch.
  */
 export function isPittsburghOpportunity(opp: SamGovOpportunity): boolean {
@@ -184,15 +184,32 @@ export function isPittsburghOpportunity(opp: SamGovOpportunity): boolean {
   const isPA = stateCode === 'PA' || stateName === 'PENNSYLVANIA';
   if (!isPA) return false;
 
-  // Check zip
+  // Check zip (expanded coverage)
   if (pop.zip && isPittsburghAreaZip(pop.zip)) return true;
 
-  // Check county
+  // Check county (expanded coverage)
   if (pop.county?.name && isPittsburghAreaCounty(pop.county.name)) return true;
 
-  // Check city name contains Pittsburgh
+  // Check major Pittsburgh area cities (more inclusive)
   const city = (pop.city?.name ?? '').toLowerCase();
-  if (city.includes('pittsburgh')) return true;
+  const pittsburghAreaCities = [
+    'pittsburgh', 'allegheny', 'butler', 'washington', 'greensburg', 'beaver falls', 
+    'new castle', 'monroeville', 'west mifflin', 'mckeesport', 'bethel park', 
+    'canonsburg', 'wexford', 'cranberry', 'mars', 'butler', 'washington', 
+    'greensburg', 'beaver', 'apollo', 'kittanning', 'ford city', 'butler'
+  ];
+  
+  if (pittsburghAreaCities.some(pittCity => city.includes(pittCity))) return true;
+
+  // Additional check: include all major cities in the 6-county region
+  const majorCitiesInRegion = [
+    'pittsburgh', 'allegheny', 'butler', 'washington', 'greensburg', 'beaver falls',
+    'monroeville', 'west mifflin', 'mckeesport', 'bethel park', 'canonsburg',
+    'wexford', 'cranberry', 'mars', 'new castle', 'kittanning', 'ford city',
+    'apollo', 'butler', 'washington', 'greensburg', 'beaver'
+  ];
+  
+  if (majorCitiesInRegion.some(cityName => city.includes(cityName))) return true;
 
   return false;
 }

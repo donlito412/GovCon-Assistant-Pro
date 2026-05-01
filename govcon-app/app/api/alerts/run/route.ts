@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/alerts/run
 // Idempotent alert checker — called by Netlify cron at 08:00 ET.
@@ -16,21 +18,19 @@ import { render } from '@react-email/render';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { AlertEmail } from '@/lib/email/alert-email';
 
-// ---- Env ----
-const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
-const ALERT_FROM = process.env.ALERT_FROM_EMAIL ?? 'alerts@govconassistant.pro';
-const ALERT_TO = process.env.ALERT_TO_EMAIL ?? 'jon@murphreeenterprises.com';
-const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://govconassistant.pro';
-
-// Guard: only allow cron or manual trigger with secret
-const CRON_SECRET = process.env.CRON_SECRET ?? '';
-
 function parseComma(val: unknown): string[] {
   if (!val || typeof val !== 'string') return [];
   return val.split(',').map((s) => s.trim()).filter(Boolean);
 }
 
-export async function GET(req: NextRequest): Promise<NextResponse> {
+async function runAlerts(req: NextRequest): Promise<NextResponse> {
+  // ---- Env ----
+  const RESEND_API_KEY = process.env.RESEND_API_KEY ?? '';
+  const ALERT_FROM = process.env.ALERT_FROM_EMAIL ?? 'alerts@govconassistant.pro';
+  const ALERT_TO = process.env.ALERT_TO_EMAIL ?? 'jon@gomurphree.com';
+  const APP_URL = process.env.NEXT_PUBLIC_APP_URL ?? 'https://govconassistant.pro';
+  const CRON_SECRET = process.env.CRON_SECRET ?? '';
+
   // Auth: require x-cron-secret header for manual triggers
   const authHeader = req.headers.get('x-cron-secret');
   if (CRON_SECRET && authHeader !== CRON_SECRET) {
@@ -201,4 +201,21 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     totalNewMatches: totalMatches,
     summary,
   }, { status: 200 });
+}
+
+export async function GET(req: NextRequest): Promise<NextResponse> {
+  return runAlerts(req);
+}
+
+export async function POST(req: NextRequest): Promise<NextResponse> {
+  // Allow POST for testing with x-ingest-secret header (same as other ingest endpoints)
+  const authHeader = req.headers.get('x-ingest-secret') || req.headers.get('x-cron-secret');
+  const INGEST_SECRET = process.env.INGEST_SECRET ?? '';
+  const CRON_SECRET = process.env.CRON_SECRET ?? '';
+  
+  if ((INGEST_SECRET && authHeader !== INGEST_SECRET) && (CRON_SECRET && authHeader !== CRON_SECRET)) {
+    return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  }
+  
+  return runAlerts(req);
 }

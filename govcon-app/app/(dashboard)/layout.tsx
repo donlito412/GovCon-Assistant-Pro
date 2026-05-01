@@ -19,7 +19,6 @@ const NAV_ITEMS = [
   { href: '/saved-searches',label: 'Saved Searches',icon: Bell },
   { href: '/analytics',     label: 'Analytics',     icon: BarChart3 },
   { href: '/agencies',      label: 'Agencies',      icon: Building2 },
-  { href: '/subcontractors',label: 'Subcontractors',icon: Users },
 ];
 
 function SidebarLink({ href, label, icon: Icon }: { href: string; label: string; icon: React.ElementType }) {

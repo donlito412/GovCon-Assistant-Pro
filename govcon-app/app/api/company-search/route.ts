@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/company-search
 // Body: { query, naicsCode, location, requireCertified, certificationTypes, limit }

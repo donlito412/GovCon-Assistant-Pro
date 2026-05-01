@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/community/connections — list my connections & pending requests
 // POST /api/community/connections — send connection request

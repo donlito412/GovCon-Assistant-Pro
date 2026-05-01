@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/community/messages?with=profileId — fetch thread
 // POST /api/community/messages — send message (must be connected)

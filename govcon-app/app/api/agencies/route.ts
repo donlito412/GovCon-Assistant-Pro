@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/agencies
 // Agency directory: all agencies with live stats from opportunities.

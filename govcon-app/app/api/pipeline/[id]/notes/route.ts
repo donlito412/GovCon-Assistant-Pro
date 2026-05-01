@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/pipeline/[id]/notes — get notes array for a pipeline item
 // POST /api/pipeline/[id]/notes — append a new note

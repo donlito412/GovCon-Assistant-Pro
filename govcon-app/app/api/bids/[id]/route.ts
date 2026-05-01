@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET   /api/bids/[id] — bid detail
 // PATCH /api/bids/[id] — update bid (outcome, team, narrative, etc.)

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/community/profiles — directory listing
 // POST /api/community/profiles — create own profile

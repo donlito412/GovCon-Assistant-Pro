@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET  /api/outreach/[id]/emails — fetch email thread
 // POST /api/outreach/[id]/emails — send outbound email via Resend

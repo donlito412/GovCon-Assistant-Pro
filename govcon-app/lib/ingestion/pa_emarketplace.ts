@@ -20,14 +20,24 @@ import {
 
 const BASE_URL = 'https://www.emarketplace.state.pa.us';
 const LISTING_URL = `${BASE_URL}/Solicitations/SolicitationSearch.aspx`;
+
+// Alternative DGS procurement page as fallback
+const DGS_URL = 'https://www.dgs.pa.gov/Materials-Services-Procurement/Procurement-Resources/Pages/Bid-Opportunities.aspx';
 const SOURCE = 'state_pa_emarketplace' as const;
 const FETCH_TIMEOUT_MS = 30_000;
 
 const HEADERS = {
   'User-Agent':
-    'GovConAssistantBot/1.0 (+https://github.com/donlito412/GovCon-Assistant-Pro; research/data-aggregation)',
-  Accept: 'text/html,application/xhtml+xml',
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+  Accept: 'text/html,application/xhtml+xml,application/xml;q=0.9,image/webp,*/*;q=0.8',
   'Accept-Language': 'en-US,en;q=0.9',
+  'Accept-Encoding': 'gzip, deflate, br',
+  'Cache-Control': 'no-cache',
+  'Pragma': 'no-cache',
+  'Sec-Fetch-Dest': 'document',
+  'Sec-Fetch-Mode': 'navigate',
+  'Sec-Fetch-Site': 'none',
+  'Upgrade-Insecure-Requests': '1',
 };
 
 /**
@@ -63,6 +73,62 @@ async function fetchDetailDescription(detailUrl: string): Promise<string | undef
   } catch {
     return undefined;
   }
+}
+
+/**
+ * Parses the DGS procurement page as fallback.
+ * DGS page lists bid opportunities in a simpler format.
+ */
+function parseDgsPage(html: string): Array<{
+  title: string;
+  solicitationNumber: string;
+  agency: string;
+  category: string;
+  dueDate: string;
+  detailUrl: string;
+}> {
+  const $ = cheerio.load(html);
+  const results: Array<{
+    title: string;
+    solicitationNumber: string;
+    agency: string;
+    category: string;
+    dueDate: string;
+    detailUrl: string;
+  }> = [];
+
+  // DGS page often uses tables or lists for bid opportunities
+  $('table tr, ul li, .ms-vb2, .item').each((i, el) => {
+    const $el = $(el);
+    if (el.tagName === 'tr' && i === 0) return; // skip header row
+
+    const $link = $el.find('a').first();
+    const title = $link.text().trim() || $el.text().trim();
+    if (!title || title.length < 10) return; // skip very short entries
+
+    const href = $link.attr('href') || '';
+    const detailUrl = href.startsWith('http') ? href : href ? `https://www.dgs.pa.gov${href.startsWith('/') ? '' : '/'}${href}` : DGS_URL;
+
+    // Try to extract solicitation number from title or surrounding text
+    const solNumMatch = title.match(/(\d{4}-\d+|RFP-\d+|BID-\d+|SOL-\d+)/i);
+    const solicitationNumber = solNumMatch ? solNumMatch[1] : '';
+
+    // Try to extract due date from surrounding text
+    const text = $el.text();
+    const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\w+ \d{1,2},\s*\d{4})/);
+    const dueDate = dateMatch ? dateMatch[1] : '';
+
+    results.push({
+      title,
+      solicitationNumber,
+      agency: 'PA Department of General Services',
+      category: 'Procurement',
+      dueDate,
+      detailUrl,
+    });
+  });
+
+  return results;
 }
 
 /**
@@ -151,16 +217,46 @@ export async function scrapeEMarketplace(): Promise<ScraperResult> {
   console.log('[pa_emarketplace] Starting scrape...');
 
   let html: string;
+  let listed: Array<{
+    title: string;
+    solicitationNumber: string;
+    agency: string;
+    category: string;
+    dueDate: string;
+    detailUrl: string;
+  }> = [];
+
+  // Try primary eMarketplace URL first
   try {
+    console.log('[pa_emarketplace] Trying primary eMarketplace URL...');
     html = await fetchHtml(LISTING_URL);
+    listed = parseListing(html);
+    console.log(`[pa_emarketplace] Primary URL found ${listed.length} solicitation(s).`);
   } catch (err) {
-    const msg = `Failed to fetch listing page: ${err instanceof Error ? err.message : String(err)}`;
-    console.error(`[pa_emarketplace] ${msg}`);
-    return { source: SOURCE, opportunities: [], errors: [msg], durationMs: Date.now() - start };
+    const msg = `Failed to fetch primary listing page: ${err instanceof Error ? err.message : String(err)}`;
+    console.warn(`[pa_emarketplace] ${msg}`);
+    errors.push(msg);
   }
 
-  const listed = parseListing(html);
-  console.log(`[pa_emarketplace] Found ${listed.length} solicitation(s) on listing page.`);
+  // If primary fails or returns no results, try DGS fallback
+  if (listed.length === 0) {
+    console.log('[pa_emarketplace] Primary failed or empty. Trying DGS fallback page...');
+    try {
+      const dgsHtml = await fetchHtml(DGS_URL);
+      listed = parseDgsPage(dgsHtml);
+      console.log(`[pa_emarketplace] DGS fallback found ${listed.length} solicitation(s).`);
+    } catch (err) {
+      const msg = `Failed to fetch DGS fallback page: ${err instanceof Error ? err.message : String(err)}`;
+      console.error(`[pa_emarketplace] ${msg}`);
+      errors.push(msg);
+    }
+  }
+
+  if (listed.length === 0) {
+    const msg = 'Both primary and fallback sources failed to return any solicitations';
+    console.error(`[pa_emarketplace] ${msg}`);
+    return { source: SOURCE, opportunities: [], errors: [...errors, msg], durationMs: Date.now() - start };
+  }
 
   for (const item of listed) {
     try {

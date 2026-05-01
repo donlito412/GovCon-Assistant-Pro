@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET /api/contracts/[id]
 // Returns a single contract opportunity by primary key.

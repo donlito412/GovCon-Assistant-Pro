@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET    /api/contacts/[id] — single contact
 // PATCH  /api/contacts/[id] — update contact

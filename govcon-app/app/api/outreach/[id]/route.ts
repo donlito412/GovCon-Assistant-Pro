@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET   /api/outreach/[id] — single outreach contact
 // PATCH /api/outreach/[id] — update status, notes, linked_bid_ids

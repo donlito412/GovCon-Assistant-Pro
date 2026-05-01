@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/ingest/grants
 // Runs all grants sources in parallel, upserts to Supabase grants table.

@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // PATCH /api/pipeline/[id]  — update stage (and optionally other fields)
 // DELETE /api/pipeline/[id] — remove item from pipeline

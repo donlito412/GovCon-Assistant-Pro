@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // GET   /api/community/profiles/[id] — single profile (public)
 // PATCH /api/community/profiles/[id] — update own profile
