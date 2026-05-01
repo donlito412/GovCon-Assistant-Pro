@@ -1,3 +1,5 @@
+export const dynamic = 'force-dynamic';
+
 // ============================================================
 // POST /api/ingest/federal
 // Triggers SAM.gov federal contract ingestion for Pittsburgh area.
@@ -97,7 +99,7 @@ async function upsertBatch(
       agency_name: opp.agency_name,
       solicitation_number: opp.solicitation_number ?? null,
       dedup_hash: opp.dedup_hash,
-      canonical_sources: JSON.stringify(opp.canonical_sources),
+      canonical_sources: opp.canonical_sources,
       naics_code: opp.naics_code ?? null,
       naics_sector: opp.naics_sector ?? null,
       contract_type: opp.contract_type,
@@ -133,7 +135,7 @@ async function upsertBatch(
     const { error: updateError } = await supabase
       .from('opportunities')
       .update({
-        canonical_sources: JSON.stringify(update.canonical_sources),
+        canonical_sources: update.canonical_sources,
         updated_at: new Date().toISOString(),
       })
       .eq('id', update.id);
