@@ -2,13 +2,13 @@
 
 export const dynamic = 'force-dynamic';
 
-import React, { useState, Suspense } from 'react';
+import React, { Suspense } from 'react';
 import { useSearchParams, useRouter, usePathname } from 'next/navigation';
 import {
   Award, DollarSign, Building2, ChevronLeft, ChevronRight,
-  ExternalLink, Search, Loader2, Filter,
+  ExternalLink, Search, Loader2,
 } from 'lucide-react';
-import { useContracts, updateSearchParam } from '@/lib/api/contracts';
+import { useContracts, updateSearchParam, type ContractListItem } from '@/lib/api/contracts';
 
 // ============================================================
 // FEDERAL CONTRACT AWARDS PAGE — /awards
@@ -92,7 +92,7 @@ function Pagination({
   );
 }
 
-function AwardRow({ award }: { award: ReturnType<typeof useContracts>['data'] extends { data: Array<infer T> } ? T : never }) {
+function AwardRow({ award }: { award: ContractListItem }) {
   // Extract recipient from description: "Awarded to: COMPANY NAME. NAICS: ..."
   const recipientMatch = award.description?.match(/Awarded to:\s*([^.]+)/i);
   const recipient = recipientMatch?.[1]?.trim() ?? '—';
@@ -280,7 +280,7 @@ function AwardsContent() {
         <>
           <div className="space-y-3">
             {awards.map((award) => (
-              <AwardRow key={award.id} award={award as any} />
+              <AwardRow key={award.id} award={award} />
             ))}
           </div>
 

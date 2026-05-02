@@ -1,6 +1,12 @@
 #!/bin/bash
-cd "/Volumes/Lito's Hard Drive/Murphree Enterprises/PGH-Gov-Contracts"
+cd "$(dirname "$0")"
+rm -f .git/index.lock .git/HEAD.lock 2>/dev/null
+git add -A
+git commit -m "Fix: awards page TypeScript error — use ContractListItem type, remove unused imports"
 git push origin main
 echo ""
-echo "Done! Press Enter to close."
+echo "=== DONE — Vercel redeploying ==="
+echo "Live app: https://gov-con-assistant-pro.vercel.app"
+echo ""
+echo "Press Enter to close."
 read
