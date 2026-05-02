@@ -54,8 +54,6 @@ async function fetchSamGovText(url: string): Promise<string> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const contentType = req.headers.get('content-type') ?? '';
   let docText = '';

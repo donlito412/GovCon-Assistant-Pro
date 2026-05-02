@@ -3,15 +3,17 @@ export const dynamic = 'force-dynamic';
 // ============================================================
 // GET  /api/outreach — list outreach contacts
 // POST /api/outreach — create outreach contact
+// No auth guard — internal tool, RLS disabled
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 
+// Shared internal user ID so all records are queryable without auth
+const INTERNAL_USER_ID = '00000000-0000-0000-0000-000000000001';
+
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const q       = searchParams.get('q')?.trim() ?? '';
@@ -23,8 +25,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
   let query = supabase
     .from('outreach_contacts')
-    .select('*', { count: 'exact' })
-    .eq('user_id', user.id);
+    .select('*', { count: 'exact' });
 
   if (q)      query = query.or(`company_name.ilike.%${q}%,contact_name.ilike.%${q}%`);
   if (status) query = query.eq('status', status);
@@ -48,15 +49,13 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
   if (!body.company_name) return NextResponse.json({ error: 'company_name required' }, { status: 400 });
 
   const { data, error } = await supabase.from('outreach_contacts').insert({
-    user_id:        user.id,
+    user_id:        INTERNAL_USER_ID,
     contact_id:     body.contact_id ?? null,
     contact_name:   body.contact_name ?? null,
     company_name:   body.company_name,

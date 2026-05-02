@@ -10,8 +10,7 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  // No auth guard — internal tool, RLS disabled
 
   const { searchParams } = new URL(req.url);
   const days      = Math.min(730, parseInt(searchParams.get('days') ?? '180'));

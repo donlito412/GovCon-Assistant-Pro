@@ -12,14 +12,12 @@ type Ctx = { params: { id: string } };
 
 export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('outreach_contacts')
     .select('*')
     .eq('id', params.id)
-    .eq('user_id', user.id)
+    .eq('user_id', '00000000-0000-0000-0000-000000000001')
     .maybeSingle();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -29,8 +27,6 @@ export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextRespo
 
 export async function PATCH(req: NextRequest, { params }: Ctx): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -45,7 +41,7 @@ export async function PATCH(req: NextRequest, { params }: Ctx): Promise<NextResp
     .from('outreach_contacts')
     .update(patch)
     .eq('id', params.id)
-    .eq('user_id', user.id)
+    .eq('user_id', '00000000-0000-0000-0000-000000000001')
     .select().single();
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });

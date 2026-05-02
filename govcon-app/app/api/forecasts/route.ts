@@ -10,8 +10,6 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const q         = searchParams.get('q');

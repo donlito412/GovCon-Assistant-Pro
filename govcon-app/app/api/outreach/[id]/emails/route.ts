@@ -17,14 +17,12 @@ type Ctx = { params: { id: string } };
 // ---- GET — fetch thread ----
 export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { data, error } = await supabase
     .from('outreach_threads')
     .select('*')
     .eq('contact_id', params.id)
-    .eq('user_id', user.id)
+    .eq('user_id', '00000000-0000-0000-0000-000000000001')
     .order('sent_at', { ascending: true });
 
   if (error) return NextResponse.json({ error: error.message }, { status: 500 });
@@ -34,8 +32,6 @@ export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextRespo
 // ---- POST — send or log ----
 export async function POST(req: NextRequest, { params }: Ctx): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authErr } = await supabase.auth.getUser();
-  if (authErr || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -84,7 +80,7 @@ export async function POST(req: NextRequest, { params }: Ctx): Promise<NextRespo
   // Store in outreach_threads
   const { data: thread, error: threadErr } = await supabase.from('outreach_threads').insert({
     contact_id:         parseInt(params.id),
-    user_id:            user.id,
+    user_id:            '00000000-0000-0000-0000-000000000001',
     direction,
     subject:            subject ?? null,
     body:               bodyText,
@@ -102,7 +98,7 @@ export async function POST(req: NextRequest, { params }: Ctx): Promise<NextRespo
     status:             newStatus,
     last_activity_at:   new Date().toISOString(),
     first_contacted_at: direction === 'outbound' ? new Date().toISOString() : undefined,
-  }).eq('id', params.id).eq('user_id', user.id);
+  }).eq('id', params.id).eq('user_id', '00000000-0000-0000-0000-000000000001');
 
   return NextResponse.json({ email: thread, resend_id: resendMessageId }, { status: 201 });
 }

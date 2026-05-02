@@ -54,9 +54,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   // Sorting
   switch (sort) {
     case 'deadline_asc':
-      query = query
-        .not('application_deadline', 'is', null)
-        .order('application_deadline', { ascending: true });
+      query = query.order('application_deadline', { ascending: true, nullsFirst: false });
       break;
     case 'amount_desc':
       query = query.order('max_amount', { ascending: false, nullsFirst: false });

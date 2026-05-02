@@ -11,8 +11,6 @@ import { createServerSupabaseClient } from '@/lib/supabase';
 // ---- GET ----
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const { searchParams } = new URL(req.url);
   const q             = searchParams.get('q')?.trim() ?? '';
@@ -25,7 +23,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   let query = supabase
     .from('contacts')
     .select('*', { count: 'exact' })
-    .eq('user_id', user.id)
+    .eq('user_id', '00000000-0000-0000-0000-000000000001')
     .order('updated_at', { ascending: false });
 
   if (q)             query = query.textSearch('fts', q, { type: 'websearch' });
@@ -52,8 +50,6 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
 // ---- POST ----
 export async function POST(req: NextRequest): Promise<NextResponse> {
   const supabase = createServerSupabaseClient();
-  const { data: { user }, error: authError } = await supabase.auth.getUser();
-  if (authError || !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   let body: any;
   try { body = await req.json(); } catch {
@@ -65,7 +61,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   }
 
   const { data, error } = await supabase.from('contacts').insert({
-    user_id:        user.id,
+    user_id:        '00000000-0000-0000-0000-000000000001',
     company_name:   body.company_name,
     contact_name:   body.contact_name ?? null,
     email:          body.email ?? null,
