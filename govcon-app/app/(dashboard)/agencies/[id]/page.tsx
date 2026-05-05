@@ -31,7 +31,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
     .eq('agency_id', agencyId)
     .eq('record_type', 'award');
 
-  const totalSpend = awards?.reduce((sum, award: any) => sum + (award.awarded_value || 0), 0) || 0;
+  const totalSpend = awards?.reduce((sum: number, award: any) => sum + (award.awarded_value || 0), 0) || 0;
 
   // Calculate top vendors
   const vendorTotals: Record<string, { name: string; uei: string; total: number }> = {};

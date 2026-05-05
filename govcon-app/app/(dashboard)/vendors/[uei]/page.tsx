@@ -19,11 +19,11 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
 
   // Assuming vendor name is consistent across their awards
   const vendorName = awards[0].vendor_name;
-  const totalWon = awards.reduce((sum, a) => sum + (a.awarded_value || 0), 0);
+  const totalWon = awards.reduce((sum: number, a: any) => sum + (a.awarded_value || 0), 0);
 
   // Aggregate by agency
   const agencyTotals: Record<string, { id: number; name: string; total: number }> = {};
-  awards.forEach((award) => {
+  awards.forEach((award: any) => {
       const agencyId = award.agency_id;
       const agencyName = (award as any).agency?.name || 'Unknown Agency';
       if (agencyId) {
