@@ -8,7 +8,8 @@ import {
   Award, DollarSign, Building2, ChevronLeft, ChevronRight,
   ExternalLink, Search, Loader2,
 } from 'lucide-react';
-import { useAwards, updateSearchParam, type AwardItem, formatAwardValue, formatAwardDate } from '@/lib/api/awards';
+import { useAwards, type AwardItem, formatAwardValue, formatAwardDate } from '@/lib/api/awards';
+import { updateSearchParam } from '@/lib/api/contracts';
 
 // ============================================================
 // CONTRACT AWARDS PAGE — /awards

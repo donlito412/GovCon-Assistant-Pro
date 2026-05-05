@@ -317,7 +317,7 @@ export async function fetchAllUSOpportunities(
 // MAIN SCRAPER FUNCTION
 // ============================================================
 
-import { normalizeSamGovOpportunities } from './normalize';
+import { normalizePittsburghOpportunities } from './normalize';
 import type { ScraperResult } from './shared/normalize_shared';
 
 /**
@@ -342,7 +342,8 @@ export async function scrapeSAMGov(): Promise<ScraperResult> {
     const result = await fetchAllUSOpportunities(apiKey, 365);
     
     // Normalize to our schema
-    const normalized = normalizeSamGovOpportunities(result.opportunities);
+    const batchResult = normalizePittsburghOpportunities(result.opportunities);
+    const normalized = batchResult.normalized;
     
     const durationMs = Date.now() - start;
     

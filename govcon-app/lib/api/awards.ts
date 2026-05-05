@@ -131,3 +131,16 @@ export function formatAwardDate(iso: string | null | undefined): string {
   if (!iso) return '—';
   return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }
+
+// ---- Utility: update URL search param ----
+
+export function updateSearchParam(key: string, value: string | undefined | null): string {
+  if (typeof window === 'undefined') return '';
+  const params = new URLSearchParams(window.location.search);
+  if (value === undefined || value === null || value === '') {
+    params.delete(key);
+  } else {
+    params.set(key, value);
+  }
+  return `?${params.toString()}`;
+}
