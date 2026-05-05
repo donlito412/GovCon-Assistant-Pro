@@ -1,16 +1,19 @@
 // ============================================================
-// CONSOLIDATED INGESTION RUNNER
-// Runs all scrapers and upserts to appropriate tables
-// Similar to GovTribe's automated data pipeline
+// CONSOLIDATED INGESTION RUNNER (TASK_027 Phase 0/1 rewrite)
+//
+// Runs ONLY the data sources we can rely on:
+//   - SAM.gov API (federal opportunities, PA scoped at API level)
+//   - Allegheny County PAVNextGen API (local awards)
+//
+// Removed (TASK_027 Phase 0): pittsburgh_city, housing_authority, ura,
+// pa_emarketplace, pa_treasury, education scrapers — HTML scraping is
+// fundamentally unreliable for a one-person tool.
 // ============================================================
 
 import { scrapeSAMGov } from './samgov';
 import { scrapeAlleghenyCounty } from './allegheny_county';
-import { scrapePittsburghCity } from './pittsburgh_city';
-import { scrapeHousingAuthority } from './housing_authority';
-import { scrapeURA } from './ura';
 import { upsertOpportunities, upsertAwards } from '@/lib/db/upsert';
-import type { ScraperResult, ScrapedOpportunity } from './shared/normalize_shared';
+import type { ScraperResult } from './shared/normalize_shared';
 
 export interface IngestionRunResult {
   timestamp: string;
@@ -22,9 +25,9 @@ export interface IngestionRunResult {
 }
 
 /**
- * Runs all configured scrapers
- * - Opportunities go to 'opportunities' table (active solicitations)
- * - Awards go to 'contract_awards' table (historical contracts)
+ * Runs all configured scrapers.
+ * - Opportunities → opportunities table
+ * - Awards → contract_awards table
  */
 export async function runFullIngestion(): Promise<IngestionRunResult> {
   const start = Date.now();
@@ -32,19 +35,16 @@ export async function runFullIngestion(): Promise<IngestionRunResult> {
   const allErrors: string[] = [];
   let totalOpportunities = 0;
   let totalAwards = 0;
-  
+
   console.log('[ingestion] Starting full ingestion run...');
-  
-  // 1. SAM.gov (Federal opportunities - Pittsburgh MSA)
-  console.log('[ingestion] Running SAM.gov scraper...');
+
+  // 1. SAM.gov (Federal opportunities, PA scoped at API level)
   try {
     const samResult = await scrapeSAMGov();
     results.push(samResult);
-    
-    // Save to database
     const { inserted, errors: upsertErrors } = await upsertOpportunities(
       samResult.opportunities,
-      'federal_samgov'
+      'federal_samgov',
     );
     totalOpportunities += inserted;
     allErrors.push(...samResult.errors, ...upsertErrors);
@@ -54,14 +54,11 @@ export async function runFullIngestion(): Promise<IngestionRunResult> {
     console.error(`[ingestion] ${msg}`);
     allErrors.push(msg);
   }
-  
-  // 2. Allegheny County (Historical awards - goes to awards table)
-  console.log('[ingestion] Running Allegheny County scraper...');
+
+  // 2. Allegheny County (Historical awards)
   try {
     const alleghenyResult = await scrapeAlleghenyCounty();
     results.push(alleghenyResult);
-    
-    // Save awards to database
     const awards = (alleghenyResult as any).awards || [];
     if (awards.length > 0) {
       const { inserted, errors: upsertErrors } = await upsertAwards(awards, 'local_allegheny');
@@ -70,82 +67,16 @@ export async function runFullIngestion(): Promise<IngestionRunResult> {
       console.log(`[ingestion] Allegheny County: ${inserted} awards saved`);
     } else {
       allErrors.push(...alleghenyResult.errors);
-      console.log(`[ingestion] Allegheny County: 0 awards to save`);
     }
   } catch (err) {
     const msg = `Allegheny County failed: ${err instanceof Error ? err.message : String(err)}`;
     console.error(`[ingestion] ${msg}`);
     allErrors.push(msg);
   }
-  
-  // 3. City of Pittsburgh (Active solicitations)
-  console.log('[ingestion] Running Pittsburgh City scraper...');
-  try {
-    const pghResult = await scrapePittsburghCity();
-    results.push(pghResult);
-    
-    // Save to database
-    const { inserted, errors: upsertErrors } = await upsertOpportunities(
-      pghResult.opportunities,
-      'local_pittsburgh'
-    );
-    totalOpportunities += inserted;
-    allErrors.push(...pghResult.errors, ...upsertErrors);
-    console.log(`[ingestion] Pittsburgh City: ${inserted} opportunities saved`);
-  } catch (err) {
-    const msg = `Pittsburgh City failed: ${err instanceof Error ? err.message : String(err)}`;
-    console.error(`[ingestion] ${msg}`);
-    allErrors.push(msg);
-  }
-  
-  // 4. Housing Authority of Pittsburgh
-  console.log('[ingestion] Running Housing Authority scraper...');
-  try {
-    const hacpResult = await scrapeHousingAuthority();
-    results.push(hacpResult);
-    
-    // Save to database
-    const { inserted, errors: upsertErrors } = await upsertOpportunities(
-      hacpResult.opportunities,
-      'local_housing_authority'
-    );
-    totalOpportunities += inserted;
-    allErrors.push(...hacpResult.errors, ...upsertErrors);
-    console.log(`[ingestion] Housing Authority: ${inserted} opportunities saved`);
-  } catch (err) {
-    const msg = `Housing Authority failed: ${err instanceof Error ? err.message : String(err)}`;
-    console.error(`[ingestion] ${msg}`);
-    allErrors.push(msg);
-  }
-  
-  // 5. URA (Urban Redevelopment Authority)
-  console.log('[ingestion] Running URA scraper...');
-  try {
-    const uraResult = await scrapeURA();
-    results.push(uraResult);
-    
-    // Save to database
-    const { inserted, errors: upsertErrors } = await upsertOpportunities(
-      uraResult.opportunities,
-      'local_ura'
-    );
-    totalOpportunities += inserted;
-    allErrors.push(...uraResult.errors, ...upsertErrors);
-    console.log(`[ingestion] URA: ${inserted} opportunities saved`);
-  } catch (err) {
-    const msg = `URA failed: ${err instanceof Error ? err.message : String(err)}`;
-    console.error(`[ingestion] ${msg}`);
-    allErrors.push(msg);
-  }
-  
+
   const durationMs = Date.now() - start;
-  
-  console.log('[ingestion] Run complete:');
-  console.log(`  - Opportunities: ${totalOpportunities}`);
-  console.log(`  - Awards: ${totalAwards}`);
-  console.log(`  - Errors: ${allErrors.length}`);
-  console.log(`  - Duration: ${durationMs}ms`);
-  
+  console.log(`[ingestion] Run complete: ${totalOpportunities} opps, ${totalAwards} awards, ${allErrors.length} errors, ${durationMs}ms`);
+
   return {
     timestamp: new Date().toISOString(),
     results,
@@ -157,17 +88,14 @@ export async function runFullIngestion(): Promise<IngestionRunResult> {
 }
 
 /**
- * Runs only federal sources (SAM.gov)
- * Called by cron job every 6 hours
+ * Runs only federal sources (SAM.gov). Called by cron every 6h.
  */
 export async function runFederalIngestion(): Promise<ScraperResult> {
-  console.log('[ingestion] Running federal ingestion (SAM.gov only)...');
   return await scrapeSAMGov();
 }
 
 /**
- * Runs only local sources
- * Called by cron job daily
+ * Runs only local sources (Allegheny County awards).
  */
 export async function runLocalIngestion(): Promise<IngestionRunResult> {
   const start = Date.now();
@@ -175,10 +103,7 @@ export async function runLocalIngestion(): Promise<IngestionRunResult> {
   const allErrors: string[] = [];
   let totalOpportunities = 0;
   let totalAwards = 0;
-  
-  console.log('[ingestion] Starting local ingestion...');
-  
-  // Allegheny County (awards)
+
   try {
     const alleghenyResult = await scrapeAlleghenyCounty();
     results.push(alleghenyResult);
@@ -187,45 +112,13 @@ export async function runLocalIngestion(): Promise<IngestionRunResult> {
   } catch (err) {
     allErrors.push(`Allegheny County: ${err instanceof Error ? err.message : String(err)}`);
   }
-  
-  // Pittsburgh City
-  try {
-    const pghResult = await scrapePittsburghCity();
-    results.push(pghResult);
-    totalOpportunities += pghResult.opportunities.length;
-    allErrors.push(...pghResult.errors);
-  } catch (err) {
-    allErrors.push(`Pittsburgh City: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  
-  // Housing Authority
-  try {
-    const hacpResult = await scrapeHousingAuthority();
-    results.push(hacpResult);
-    totalOpportunities += hacpResult.opportunities.length;
-    allErrors.push(...hacpResult.errors);
-  } catch (err) {
-    allErrors.push(`Housing Authority: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  
-  // URA
-  try {
-    const uraResult = await scrapeURA();
-    results.push(uraResult);
-    totalOpportunities += uraResult.opportunities.length;
-    allErrors.push(...uraResult.errors);
-  } catch (err) {
-    allErrors.push(`URA: ${err instanceof Error ? err.message : String(err)}`);
-  }
-  
-  const durationMs = Date.now() - start;
-  
+
   return {
     timestamp: new Date().toISOString(),
     results,
     totalOpportunities,
     totalAwards,
     errors: allErrors,
-    durationMs,
+    durationMs: Date.now() - start,
   };
 }

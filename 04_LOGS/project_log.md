@@ -959,15 +959,45 @@ Status: DONE
 
 ---
 
-## LOG TEMPLATE (copy for each completed task)
+## 2026-05-01 (TASK_027)
 
-[DATE]
-
-Agent: [Claude / Cursor / Other]
-Task ID: [TASK_###]
-Task Goal: [one line]
+Agent: Claude
+Task ID: TASK_027
+Task Goal: Rebuild data layer and UI to replicate GovTribe value loops
 Output Files:
-  - [list output file paths]
-Notes: [anything notable]
-Next Step: [TASK_### — description]
+  - govcon-app/lib/ingestion/pittsburgh_city.ts (deprecated)
+  - govcon-app/lib/ingestion/housing_authority.ts (deprecated)
+  - govcon-app/lib/ingestion/ura.ts (deprecated)
+  - govcon-app/lib/ingestion/pa_emarketplace.ts (deprecated)
+  - govcon-app/lib/ingestion/pa_treasury.ts (deprecated)
+  - govcon-app/lib/ingestion/education/*.ts (deprecated)
+  - govcon-app/lib/ingestion/samgov.ts (rewritten)
+  - govcon-app/lib/ingestion/usaspending.ts (new)
+  - govcon-app/supabase_unified_schema_task27.sql (new migration)
+  - govcon-app/vercel.json (updated cron)
+  - govcon-app/app/(dashboard)/opportunities/add/page.tsx (new manual entry form)
+  - govcon-app/app/(dashboard)/agencies/[id]/page.tsx (new detail page)
+  - govcon-app/app/(dashboard)/vendors/[uei]/page.tsx (new detail page)
+  - govcon-app/app/(dashboard)/contracts/[id]/page.tsx (new detail page)
+  - govcon-app/components/universal-search.tsx (new component)
+  - 04_LOGS/task_027_validation/journey_1_federal_opps.md
+  - 04_LOGS/task_027_validation/journey_2_officer_contact.md
+  - 04_LOGS/task_027_validation/journey_3_agency_history.md
+  - 04_LOGS/task_027_validation/journey_4_top_vendors.md
+  - 04_LOGS/task_027_validation/journey_5_vendor_history.md
+Notes:
+  Executed a massive cleanup of flaky HTML scrapers to stabilize the data ingestion pipeline.
+  Rewrote SAM.gov scraper to properly use the `state=PA` filter at the API level, solving the Vercel timeout and rate-limiting issues.
+  Introduced USASpending API ingestion to populate historical award data.
+  Designed a unified `records` table schema to simplify combining opportunities, awards, and grants, mirroring GovTribe's structure.
+  Built the core UI cross-linking loops: Agency profiles show total spend and top vendors; Vendor profiles show total won and top agencies; Contract profiles link to both and show potential recompetes.
+  Validated the 5 core user journeys against GovTribe's functionality.
+
+  Before/After Journey Comparison:
+  1. Federal Opps in PA (14d): Before -> Empty DB due to scraper timing out fetching the whole US. After -> SAM scraper explicitly targets PA at the API level; data is fresh and scoped.
+  2. Officer Contact: Before -> Detail pages didn't exist or lacked parsed data. After -> Detail page exists, though raw POC JSON mapping to UI is still basic.
+  3. Agency History: Before -> Agencies were just names on a list. After -> Agency Profile aggregates total $ spent and lists Top Vendors.
+  4. Top Vendors: Before -> Vendors didn't exist as entities. After -> Fully integrated into Agency Profile with calculated total wins.
+  5. Vendor History: Before -> N/A. After -> Vendor Profile shows their total wins, best agencies, and lists every recent award.
+Next Step: Review live deployment
 Status: DONE
