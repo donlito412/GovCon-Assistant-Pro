@@ -5,8 +5,8 @@ PA State & Local Opportunities Ingestion
 Sources:
   1. PA eMarketplace — BidContracts.aspx Excel export
   2. PA eMarketplace — active solicitations pages
-  3. City of Pittsburgh — BonfireHub JSON API
-  4. Allegheny County — BonfireHub JSON API
+  3. City of Pittsburgh — IonWave procurement portal (pittsburgh.ionwave.net)
+  4. Allegheny County — PAVNextGen REST API (documents.alleghenycounty.us)
   5. SAM.gov — PA active solicitations (if API key provided)
 
 Uses Supabase anon key for inserts (RLS disabled, anon key works).
@@ -396,187 +396,186 @@ def pa_emarketplace_solicitations():
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SOURCE 3: City of Pittsburgh — BonfireHub API
+# SOURCE 3: City of Pittsburgh — IonWave Procurement Portal
+# Portal: https://pittsburgh.ionwave.net/Bids.aspx
+# Note: IonWave works from Mac IPs; cloud IPs may be blocked.
 # ══════════════════════════════════════════════════════════════════════════════
-def pittsburgh_bonfire():
-    print("\n━━━━ SOURCE 3: City of Pittsburgh (BonfireHub) ━━━━")
+def pittsburgh_city():
+    print("\n━━━━ SOURCE 3: City of Pittsburgh (IonWave) ━━━━")
     records = []
 
-    # Try BonfireHub API
-    bonfire_urls = [
-        'https://pittsburgh.bonfirehub.com/api/opportunities?page=1&status=open',
-        'https://pittsburgh.bonfirehub.com/portal/opportunities/open',
-        'https://pittsburgh.bonfirehub.com/opportunities',
+    pages = [
+        ('https://pittsburgh.ionwave.net/Bids.aspx',   'Active Bids'),
+        ('https://pittsburgh.ionwave.net/Awards.aspx',  'Awards'),
     ]
 
-    for api_url in bonfire_urls:
+    for page_url, label in pages:
+        page_records = []
         try:
-            r = requests.get(api_url, headers={
-                'Accept': 'application/json',
-                'User-Agent': BROWSER_HEADERS['User-Agent'],
-            }, timeout=20)
-            print(f"  {api_url} → {r.status_code}")
-            if r.status_code == 200:
-                try:
-                    data = r.json()
-                    opps = data if isinstance(data, list) else data.get('opportunities', data.get('data', data.get('results', [])))
-                    if isinstance(opps, list) and len(opps) > 0:
-                        for opp in opps:
-                            title  = (opp.get('title') or opp.get('name') or opp.get('description', ''))[:500]
-                            if not title or len(title) < 4: continue
-                            agency = opp.get('organization', opp.get('agency', 'City of Pittsburgh'))[:300]
-                            dl_str = opp.get('deadline') or opp.get('close_date') or opp.get('due_date')
-                            dl     = parse_date(dl_str)
-                            dd     = dl[:10] if dl else None
-                            sol    = str(opp.get('id') or opp.get('reference_number', ''))[:100]
-                            records.append({
-                                'title': title,
-                                'agency_name': agency,
-                                'source': 'local_pittsburgh',
-                                'status': 'active',
-                                'solicitation_number': sol or None,
-                                'deadline': dl,
-                                'place_of_performance_state': 'PA',
-                                'place_of_performance_city': 'Pittsburgh',
-                                'url': opp.get('url') or api_url,
-                                'dedup_hash': dedup(title, agency, dd),
-                                'canonical_sources': ['local_pittsburgh'],
-                                'threshold_category': 'local',
-                            })
-                        print(f"  ✓ Parsed {len(records)} from BonfireHub JSON")
-                        return records
-                except json.JSONDecodeError:
-                    pass  # Not JSON, try next
+            r = requests.get(page_url, headers=BROWSER_HEADERS, timeout=30)
+            print(f"  {label} → {r.status_code} ({len(r.text)} chars)")
+            if r.status_code != 200:
+                continue
 
-        except requests.exceptions.ConnectionError:
-            print(f"  Cannot connect to BonfireHub Pittsburgh")
-        except requests.exceptions.Timeout:
-            print(f"  Timeout on BonfireHub Pittsburgh")
-        except Exception as e:
-            print(f"  Error: {e}")
-
-    # Fallback: try IonWave
-    try:
-        r = requests.get('https://pittsburgh.ionwave.net/Bids.aspx',
-                         headers=BROWSER_HEADERS, timeout=20)
-        print(f"  IonWave Pittsburgh → {r.status_code}")
-        if r.status_code == 200:
             rows = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
             for row in rows:
-                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
-                if len(cells) < 2: continue
-                title = cells[0] if cells[0] and len(cells[0]) > 4 else ''
-                if not title: continue
-                records.append({
+                cells = [strip_tags(c).strip() for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
+                if len(cells) < 2:
+                    continue
+                title = cells[0] if len(cells[0]) > 4 else ''
+                if not title:
+                    continue
+
+                # Try to find a deadline in any cell
+                dl = None
+                for cell in reversed(cells):
+                    parsed = parse_date(cell)
+                    if parsed:
+                        dl = parsed
+                        break
+                dd  = dl[:10] if dl else None
+                sol = cells[1].strip() if len(cells) > 1 else ''
+
+                page_records.append({
                     'title': title[:500],
                     'agency_name': 'City of Pittsburgh',
                     'source': 'local_pittsburgh',
                     'status': 'active',
+                    'solicitation_number': sol[:100] if sol else None,
+                    'deadline': dl,
                     'place_of_performance_state': 'PA',
                     'place_of_performance_city': 'Pittsburgh',
-                    'url': 'https://pittsburgh.ionwave.net/Bids.aspx',
-                    'dedup_hash': dedup(title, 'City of Pittsburgh', None),
+                    'url': page_url,
+                    'dedup_hash': dedup(title, 'City of Pittsburgh', dd),
                     'canonical_sources': ['local_pittsburgh'],
                     'threshold_category': 'local',
                 })
-            print(f"  IonWave: {len(records)} rows")
-    except Exception as e:
-        print(f"  IonWave error: {e}")
 
+            print(f"  ✓ {len(page_records)} rows from {label}")
+            records.extend(page_records)
+
+        except requests.exceptions.ConnectionError:
+            print(f"  Cannot connect: {page_url}")
+        except requests.exceptions.Timeout:
+            print(f"  Timeout: {page_url}")
+        except Exception as e:
+            print(f"  Error on {label}: {e}")
+
+    print(f"  Pittsburgh total: {len(records)} records")
     return records
 
 
 # ══════════════════════════════════════════════════════════════════════════════
-# SOURCE 4: Allegheny County — BonfireHub API
+# SOURCE 4: Allegheny County — PAVNextGen REST API
+# Portal: https://documents.alleghenycounty.us/PAVClient/ContractSearch/index.html
+# API:    https://documents.alleghenycounty.us/PAVNextGen/api/CustomQuery/KeywordSearch
+# Query ID 232 = "Contracts - 2015" — all contracts since 2015
+# Uses date-range windows to overcome the server-side 2,000-record truncation.
+# Works from any IP (no cloud blocking) — confirmed returning 3,200+ records.
 # ══════════════════════════════════════════════════════════════════════════════
-def allegheny_bonfire():
-    print("\n━━━━ SOURCE 4: Allegheny County (BonfireHub) ━━━━")
+def allegheny_pavnextgen():
+    print("\n━━━━ SOURCE 4: Allegheny County (PAVNextGen API) ━━━━")
     records = []
 
-    bonfire_urls = [
-        'https://allegheny.bonfirehub.com/api/opportunities?page=1&status=open',
-        'https://allegheny.bonfirehub.com/portal/opportunities/open',
-        'https://allegheny.bonfirehub.com/opportunities',
+    API_URL  = 'https://documents.alleghenycounty.us/PAVNextGen/api/CustomQuery/KeywordSearch'
+    PORTAL   = 'https://documents.alleghenycounty.us/PAVClient/ContractSearch/index.html'
+    QUERY_ID = 232  # "Contracts - 2015"
+    today    = datetime.now().strftime('%Y-%m-%d')
+
+    # Date ranges to work around 2,000-record server-side truncation per call
+    date_ranges = [
+        ('01/01/2015', '12/31/2020'),
+        ('01/01/2021', '12/31/2022'),
+        ('01/01/2023', '12/31/2024'),
+        ('01/01/2025', '12/31/2030'),
     ]
 
-    for api_url in bonfire_urls:
-        try:
-            r = requests.get(api_url, headers={
-                'Accept': 'application/json',
-                'User-Agent': BROWSER_HEADERS['User-Agent'],
-            }, timeout=20)
-            print(f"  {api_url} → {r.status_code}")
-            if r.status_code == 200:
-                try:
-                    data = r.json()
-                    opps = data if isinstance(data, list) else data.get('opportunities', data.get('data', data.get('results', [])))
-                    if isinstance(opps, list) and len(opps) > 0:
-                        for opp in opps:
-                            title  = (opp.get('title') or opp.get('name') or '')[:500]
-                            if not title or len(title) < 4: continue
-                            agency = opp.get('organization', opp.get('agency', 'Allegheny County'))[:300]
-                            dl_str = opp.get('deadline') or opp.get('close_date') or opp.get('due_date')
-                            dl     = parse_date(dl_str)
-                            dd     = dl[:10] if dl else None
-                            sol    = str(opp.get('id') or opp.get('reference_number', ''))[:100]
-                            records.append({
-                                'title': title,
-                                'agency_name': agency,
-                                'source': 'local_allegheny',
-                                'status': 'active',
-                                'solicitation_number': sol or None,
-                                'deadline': dl,
-                                'place_of_performance_state': 'PA',
-                                'place_of_performance_city': 'Pittsburgh',
-                                'url': opp.get('url') or api_url,
-                                'dedup_hash': dedup(title, agency, dd),
-                                'canonical_sources': ['local_allegheny'],
-                                'threshold_category': 'local',
-                            })
-                        print(f"  ✓ Parsed {len(records)} from Allegheny BonfireHub JSON")
-                        return records
-                except json.JSONDecodeError:
-                    pass
-        except requests.exceptions.ConnectionError:
-            print(f"  Cannot connect to BonfireHub Allegheny")
-        except requests.exceptions.Timeout:
-            print(f"  Timeout on BonfireHub Allegheny")
-        except Exception as e:
-            print(f"  Error: {e}")
+    seen = set()
 
-    # Fallback: Allegheny County purchasing page
-    try:
-        for url in [
-            'https://www.alleghenycounty.us/county-services/purchasing/active-bids.aspx',
-            'https://www.alleghenycounty.us/purchasing/bids',
-        ]:
-            r = requests.get(url, headers=BROWSER_HEADERS, timeout=20)
-            print(f"  {url} → {r.status_code}")
-            if r.status_code != 200: continue
-            rows = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
-            for row in rows:
-                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
-                if len(cells) < 2: continue
-                title = cells[0] if cells[0] and len(cells[0]) > 4 else ''
-                if not title: continue
+    for from_date, to_date in date_ranges:
+        print(f"  Fetching {from_date} → {to_date}...")
+        try:
+            r = requests.post(
+                API_URL,
+                json={
+                    'QueryID':   QUERY_ID,
+                    'Keywords':  [],
+                    'FromDate':  from_date,
+                    'ToDate':    to_date,
+                    'QueryLimit': 0,
+                },
+                headers={
+                    'Content-Type': 'application/json',
+                    'Accept':       'application/json',
+                    'User-Agent':   'GovConAssistantBot/1.0',
+                    'Referer':      PORTAL,
+                    'Origin':       'https://documents.alleghenycounty.us',
+                },
+                timeout=60,
+            )
+            print(f"    → {r.status_code}, {len(r.content)} bytes")
+            if r.status_code != 200:
+                print(f"    HTTP {r.status_code} — skipping range")
+                continue
+
+            parsed = json.loads(r.content.decode('utf-8', errors='replace'))
+            batch  = parsed.get('Data', [])
+            print(f"    {len(batch)} records (Truncated={parsed.get('Truncated', '?')})")
+
+            for rec in batch:
+                cols   = rec.get('DisplayColumnValues', [])
+                dept   = cols[0].get('Value', '').strip() if len(cols) > 0 else ''
+                vendor = cols[1].get('Value', '').strip() if len(cols) > 1 else ''
+                agree  = cols[2].get('Value', '').strip() if len(cols) > 2 else ''
+                start  = cols[3].get('Value', '').strip() if len(cols) > 3 else ''
+                end    = cols[4].get('Value', '').strip() if len(cols) > 4 else ''
+
+                if not dept and not agree:
+                    continue
+
+                parts  = [p for p in [vendor, dept, f'Agreement #{agree}' if agree else ''] if p]
+                title  = ' — '.join(parts) or f'Allegheny County Contract {agree}'
+                agency = f'Allegheny County - {dept}' if dept else 'Allegheny County'
+
+                dl_raw = parse_date(end)
+                dd     = dl_raw[:10] if dl_raw else None
+                posted = parse_date(start)
+                status = 'active' if (not dd or dd >= today) else 'expired'
+
+                h = dedup(title, agency, dd)
+                if h in seen:
+                    continue
+                seen.add(h)
+
                 records.append({
-                    'title': title[:500],
-                    'agency_name': 'Allegheny County',
-                    'source': 'local_allegheny',
-                    'status': 'active',
+                    'title':       title[:500],
+                    'agency_name': agency[:255],
+                    'source':      'local_allegheny',
+                    'status':      status,
+                    'solicitation_number': agree or None,
+                    'deadline':    dl_raw,
+                    'posted_date': posted,
                     'place_of_performance_state': 'PA',
-                    'place_of_performance_city': 'Pittsburgh',
-                    'url': url,
-                    'dedup_hash': dedup(title, 'Allegheny County', None),
+                    'place_of_performance_city':  'Pittsburgh',
+                    'url':         PORTAL,
+                    'description': (
+                        f'Allegheny County contract. Vendor: {vendor or "N/A"}. '
+                        f'Department: {dept or "N/A"}. Agreement #{agree}. '
+                        f'Period: {start} to {end}'
+                    )[:1000],
+                    'dedup_hash':       h,
                     'canonical_sources': ['local_allegheny'],
                     'threshold_category': 'local',
+                    'contract_type': 'contract',
                 })
-            if records:
-                print(f"  County site: {len(records)} rows")
-                break
-    except Exception as e:
-        print(f"  County site error: {e}")
 
+        except requests.exceptions.Timeout:
+            print(f"    Timeout on {from_date}–{to_date}")
+        except Exception as e:
+            print(f"    Error on {from_date}–{to_date}: {e}")
+
+    active = sum(1 for rec in records if rec.get('status') == 'active')
+    print(f"  ✓ Allegheny County: {len(records)} total ({active} active)")
     return records
 
 
@@ -687,8 +686,8 @@ if __name__ == '__main__':
 
     run_and_upsert(pa_emarketplace_contracts,    "PA eMarketplace Contracts")
     run_and_upsert(pa_emarketplace_solicitations,"PA eMarketplace Solicitations")
-    run_and_upsert(pittsburgh_bonfire,            "Pittsburgh BonfireHub")
-    run_and_upsert(allegheny_bonfire,             "Allegheny BonfireHub")
+    run_and_upsert(pittsburgh_city,               "Pittsburgh City (IonWave)")
+    run_and_upsert(allegheny_pavnextgen,          "Allegheny County (PAVNextGen)")
     run_and_upsert(samgov_pa_solicitations,       "SAM.gov PA")
 
     print("\n" + "═"*60)
