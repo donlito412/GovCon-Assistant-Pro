@@ -54,13 +54,24 @@ export function ContractCard({ contract, onAddToPipeline }: ContractCardProps) {
         )}
       </div>
 
-      {/* Title */}
-      <Link
-        href={`/contracts/${contract.id}`}
-        className="text-gray-900 font-semibold text-sm leading-snug hover:text-blue-600 transition line-clamp-2"
-      >
-        {contract.title}
-      </Link>
+      {/* Title - links to external URL if available, otherwise internal detail page */}
+      {contract.url ? (
+        <a
+          href={contract.url}
+          target="_blank"
+          rel="noopener noreferrer"
+          className="text-gray-900 font-semibold text-sm leading-snug hover:text-blue-600 transition line-clamp-2"
+        >
+          {contract.title}
+        </a>
+      ) : (
+        <Link
+          href={`/contracts/${contract.id}`}
+          className="text-gray-900 font-semibold text-sm leading-snug hover:text-blue-600 transition line-clamp-2"
+        >
+          {contract.title}
+        </Link>
+      )}
 
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">

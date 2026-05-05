@@ -20,8 +20,8 @@ const SOURCE = 'local_pittsburgh' as const;
 const FETCH_TIMEOUT_MS = 30_000;
 
 // PRIMARY: Bonfire Hub (Pittsburgh's current procurement platform)
-const BONFIRE_PORTAL = 'https://pittsburghpa.bonfirehub.com';
-const BONFIRE_PROJECTS = 'https://pittsburghpa.bonfirehub.com/project_opportunities';
+const BONFIRE_PORTAL = 'https://pittsburgh.bonfirehub.com';
+const BONFIRE_PROJECTS = 'https://pittsburgh.bonfirehub.com/project_opportunities';
 
 // Fallback: Finance Department page
 const FINANCE_URL = 'https://pittsburghpa.gov/finance/bids-rfps';

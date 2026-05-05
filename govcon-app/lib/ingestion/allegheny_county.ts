@@ -125,6 +125,11 @@ function mapRecord(rec: PAVRecord): ScrapedAward | null {
 
   const dedupHash = computeDedupHash(title, agency, contractEndDate ?? null);
 
+  // Build detail URL using contract ID or agreement number
+  const detailUrl = rec.ID 
+    ? `https://documents.alleghenycounty.us/PAVClient/ContractSearch/index.html#/contract/${rec.ID}`
+    : PORTAL_URL;
+
   return {
     source: SOURCE,
     title: title.slice(0, 500),
@@ -142,7 +147,7 @@ function mapRecord(rec: PAVRecord): ScrapedAward | null {
     place_of_performance_city: 'Pittsburgh',
     place_of_performance_state: 'PA',
     description: `Allegheny County contract. Vendor: ${vendor || 'N/A'}. Department: ${dept || 'N/A'}. Agreement #${agree}. Period: ${start} to ${end}`.slice(0, 1000),
-    url: PORTAL_URL,
+    url: detailUrl,
     status: 'awarded',
   };
 }

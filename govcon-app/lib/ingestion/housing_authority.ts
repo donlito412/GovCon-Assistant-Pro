@@ -50,43 +50,43 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
     const html = await fetchHtml(HACP_URL);
     const $ = cheerio.load(html);
     
-    // HACP page typically lists opportunities in various formats
-    // Look for links, list items, or table rows containing solicitation info
-    const items = $('a, li, tr, article, .opportunity, .solicitation, .rfp, .bid');
+    // HACP procurement page - look for content areas, links, and document listings
+    // The page typically lists RFPs/RFQs in various sections
+    const items = $('.content a, .entry-content a, article a, .post a, .page-content a, main a, #main-content a, .document a, [href*=".pdf"], a[href*="rfp"], a[href*="RFP"], a[href*="bid"], a[href*="Bid"], a[href*="solicitation"]');
     
     items.each((_, el) => {
       const $el = $(el);
-      const text = $el.text().trim();
+      const text = $el.text().trim() || $el.attr('title') || '';
+      const href = $el.attr('href') || '';
       
-      // Look for RFP/Bid/Solicitation patterns
-      if (!text.match(/\b(RFP|Bid|Solicitation|IFB|RFQ|Contract|Procurement)\b/i)) return;
+      // Look for RFP/Bid/Solicitation patterns in text or URL
+      const hasProcurementKeyword = text.match(/\b(RFP|Bid|Solicitation|IFB|RFQ|Procurement|Contract|Opportunity)\b/i) ||
+                                    href.match(/\b(rfp|bid|solicitation|ifb|rfq|procurement)\b/i);
+      if (!hasProcurementKeyword) return;
       
-      const title = text.length > 100 ? text.substring(0, 100) + '...' : text;
+      // Use link text or parent container text for title
+      let title = text.length > 10 ? text : $el.parent().text().trim();
+      title = title.length > 150 ? title.substring(0, 150) + '...' : title;
       if (!title || title.length < 10) return;
       
-      // Extract solicitation number
-      const numMatch = text.match(/(?:RFP|Bid|IFB|RFQ)[-#\s]*(\d{2,4}[-\d]*)/i) ||
-                       text.match(/#\s*(\d{4}[-\d]*)/);
+      // Extract solicitation number from text or filename
+      const numMatch = text.match(/(?:RFP|RFQ|IFB|Bid)[-#\s]*(\d{2,4}[-\d]*)/i) ||
+                       text.match(/#\s*(\d{4}[-\d]*)/) ||
+                       href.match(/(\d{4,}[-_]?\d*)/);
       const solicitationNumber = numMatch ? numMatch[1] : '';
       
-      // Extract dates
+      // Extract dates from text
       const dateMatch = text.match(/(\d{1,2}\/\d{1,2}\/\d{4}|\d{4}-\d{2}-\d{2}|[A-Za-z]+\s+\d{1,2},?\s*\d{4})/);
       const deadlineText = dateMatch ? dateMatch[1] : '';
       const deadline = parseToIso(deadlineText);
       
-      // Extract URL
-      const href = $el.attr('href') || $el.find('a').first().attr('href') || '';
+      // Build URL
       let url: string;
       if (href.startsWith('http')) {
         url = href;
       } else if (href) {
         url = `https://www.hacp.org${href.startsWith('/') ? '' : '/'}${href}`;
       } else {
-        url = HACP_URL;
-      }
-      
-      // Skip PDF links (just the listing page)
-      if (href.toLowerCase().endsWith('.pdf')) {
         url = HACP_URL;
       }
       
