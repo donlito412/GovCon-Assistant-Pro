@@ -3,236 +3,272 @@
 PA State & Local Opportunities Ingestion
 =========================================
 Sources:
-  1. PA eMarketplace (BidContracts.aspx) — Export All to Excel
-  2. PA eMarketplace (Search.aspx) — Active solicitations page
-  3. City of Pittsburgh / Allegheny BonfireHub public solicitations
-  4. PA Treasury contracts API (contracts.patreasury.gov)
+  1. PA eMarketplace — BidContracts.aspx Excel export
+  2. PA eMarketplace — active solicitations pages
+  3. City of Pittsburgh — BonfireHub JSON API
+  4. Allegheny County — BonfireHub JSON API
+  5. SAM.gov — PA active solicitations (if API key provided)
 
-Inserts into Supabase `opportunities` table.
+Uses Supabase anon key for inserts (RLS disabled, anon key works).
+Run via INGEST_STATE_LOCAL.command or: python3 ingest_state_local.py [path/to/.env.local]
 """
 
-import sys, os, re, json, hashlib, io, time
-from datetime import datetime, timezone
+import sys, os, re, json, hashlib, io, traceback, time
+from datetime import datetime
 
-# Read .env.local
+# ── Load .env.local ──────────────────────────────────────────────────────────
 def load_env(path):
     env = {}
-    with open(path) as f:
-        for line in f:
-            line = line.strip()
-            if '=' in line and not line.startswith('#'):
-                k, v = line.split('=', 1)
-                env[k.strip()] = v.strip().strip('"').strip("'")
+    try:
+        with open(path) as f:
+            for line in f:
+                line = line.strip()
+                if '=' in line and not line.startswith('#'):
+                    k, v = line.split('=', 1)
+                    env[k.strip()] = v.strip().strip('"').strip("'")
+    except Exception as e:
+        print(f"ERROR reading env file: {e}")
+        sys.exit(1)
     return env
 
-env_path = sys.argv[1] if len(sys.argv) > 1 else os.path.join(os.path.dirname(__file__), 'govcon-app/.env.local')
+# Find env file
+env_path = None
+if len(sys.argv) > 1:
+    env_path = sys.argv[1]
+else:
+    script_dir = os.path.dirname(os.path.abspath(__file__))
+    for candidate in [
+        os.path.join(script_dir, 'govcon-app/.env.local'),
+        os.path.join(script_dir, '.env.local'),
+        os.path.join(script_dir, 'govcon-app/.env'),
+    ]:
+        if os.path.exists(candidate):
+            env_path = candidate
+            break
+
+if not env_path or not os.path.exists(env_path):
+    print("ERROR: .env.local not found. Expected at govcon-app/.env.local")
+    print("Create it by copying govcon-app/.env.example and filling in values.")
+    sys.exit(1)
+
+print(f"Loading env: {env_path}")
 env = load_env(env_path)
 
 SUPABASE_URL = env.get('NEXT_PUBLIC_SUPABASE_URL', '').rstrip('/')
-SERVICE_KEY  = env.get('SUPABASE_SERVICE_ROLE_KEY', '')
+# Use anon key — works for inserts when RLS is disabled
+ANON_KEY     = env.get('NEXT_PUBLIC_SUPABASE_ANON_KEY', '')
+# Fall back to service role key if anon key not present
+INSERT_KEY   = ANON_KEY or env.get('SUPABASE_SERVICE_ROLE_KEY', '')
+SAMGOV_KEY   = env.get('SAMGOV_API_KEY', '')
 
-if not SUPABASE_URL or not SERVICE_KEY:
-    print("ERROR: NEXT_PUBLIC_SUPABASE_URL or SUPABASE_SERVICE_ROLE_KEY missing from .env.local")
+if not SUPABASE_URL or not INSERT_KEY or INSERT_KEY.startswith('your_'):
+    print("ERROR: NEXT_PUBLIC_SUPABASE_URL and NEXT_PUBLIC_SUPABASE_ANON_KEY must be set in .env.local")
     sys.exit(1)
 
-import requests
+print(f"Supabase: {SUPABASE_URL}")
+print(f"Insert key: {INSERT_KEY[:30]}...")
 
-HEADERS_WEB = {
-    'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36',
+# ── Install dependencies quietly ─────────────────────────────────────────────
+import subprocess
+subprocess.run(
+    [sys.executable, '-m', 'pip', 'install', '--quiet', '--user', 'requests', 'openpyxl'],
+    capture_output=True
+)
+try:
+    import requests
+except ImportError:
+    print("ERROR: 'requests' not installed. Run: pip3 install requests")
+    sys.exit(1)
+
+# ── Helpers ───────────────────────────────────────────────────────────────────
+BROWSER_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) '
+        'AppleWebKit/537.36 (KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    ),
     'Accept': 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8',
     'Accept-Language': 'en-US,en;q=0.9',
+    'Accept-Encoding': 'gzip, deflate, br',
+    'Connection': 'keep-alive',
 }
 
-def compute_dedup_hash(title, agency, deadline_date):
-    s = f"{title.lower()}{(agency or '').lower()}{deadline_date or ''}"
+def dedup(title, agency, deadline_date):
+    s = f"{(title or '').lower()}{(agency or '').lower()}{deadline_date or ''}"
     return hashlib.sha256(s.encode()).hexdigest()
 
 def parse_date(s):
-    """Try multiple date formats, return ISO string or None."""
-    if not s:
-        return None
-    s = s.strip()
-    for fmt in ['%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%B %d, %Y', '%b %d, %Y',
-                '%m-%d-%Y', '%Y/%m/%d']:
+    if not s: return None
+    s = str(s).strip()
+    for fmt in ['%m/%d/%Y', '%m/%d/%y', '%Y-%m-%d', '%B %d, %Y', '%b %d, %Y', '%m-%d-%Y']:
         try:
-            dt = datetime.strptime(s, fmt)
-            return dt.strftime('%Y-%m-%dT00:00:00Z')
+            return datetime.strptime(s, fmt).strftime('%Y-%m-%dT00:00:00Z')
         except:
             pass
     return None
 
-def dollars_to_cents(s):
-    if not s:
-        return None
+def cents(s):
+    if not s: return None
     try:
         return int(float(re.sub(r'[^0-9.]', '', str(s))) * 100)
     except:
         return None
 
-# ============================================================
-# SUPABASE UPSERT
-# ============================================================
-def upsert_batch(records):
+def strip_tags(s):
+    return re.sub(r'<[^>]+>', '', str(s or '')).strip()
+
+def is_past(dt_str):
+    if not dt_str: return False
+    try:
+        return datetime.strptime(dt_str[:10], '%Y-%m-%d') < datetime.now()
+    except:
+        return False
+
+# ── Supabase upsert ───────────────────────────────────────────────────────────
+def upsert(records, label):
     if not records:
+        print(f"  [{label}] No records to upsert")
         return 0
+
     url = f"{SUPABASE_URL}/rest/v1/opportunities?on_conflict=dedup_hash"
-    headers = {
+    hdrs = {
         'Content-Type': 'application/json',
-        'Authorization': f'Bearer {SERVICE_KEY}',
-        'apikey': SERVICE_KEY,
+        'Authorization': f'Bearer {INSERT_KEY}',
+        'apikey': INSERT_KEY,
         'Prefer': 'resolution=merge-duplicates,return=minimal',
     }
-    try:
-        r = requests.post(url, json=records, headers=headers, timeout=30)
-        if r.status_code in (200, 201):
-            return len(records)
-        else:
-            print(f"  Upsert error {r.status_code}: {r.text[:200]}")
-            return 0
-    except Exception as e:
-        print(f"  Upsert exception: {e}")
-        return 0
-
-def batch_upsert_all(records, source_label, batch_size=100):
     total = 0
-    for i in range(0, len(records), batch_size):
-        batch = records[i:i+batch_size]
-        inserted = upsert_batch(batch)
-        total += inserted
-        print(f"  [{source_label}] Batch {i//batch_size + 1}: {inserted}/{len(batch)} upserted")
+    BATCH = 50
+    for i in range(0, len(records), BATCH):
+        batch = records[i:i+BATCH]
+        try:
+            r = requests.post(url, json=batch, headers=hdrs, timeout=30)
+            if r.status_code in (200, 201, 204):
+                total += len(batch)
+            else:
+                print(f"  [{label}] Batch {i//BATCH+1} HTTP {r.status_code}: {r.text[:200]}")
+        except Exception as e:
+            print(f"  [{label}] Batch {i//BATCH+1} error: {e}")
+    print(f"  [{label}] ✓ {total}/{len(records)} upserted")
     return total
 
-# ============================================================
-# SOURCE 1: PA eMarketplace — Contracts Export (Excel)
-# ============================================================
-def fetch_pa_emarketplace_contracts():
-    print("\n📋 PA eMarketplace — Contract Export...")
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 1: PA eMarketplace — BidContracts.aspx Excel export
+# ══════════════════════════════════════════════════════════════════════════════
+def pa_emarketplace_contracts():
+    print("\n━━━━ SOURCE 1: PA eMarketplace BidContracts ━━━━")
     records = []
     BASE = 'https://www.emarketplace.state.pa.us'
 
-    session = requests.Session()
-    session.headers.update(HEADERS_WEB)
-
     try:
-        # Step 1: GET the contracts page to get ViewState
-        r = session.get(f'{BASE}/BidContracts.aspx', timeout=20)
-        if r.status_code != 200:
-            print(f"  Failed to load BidContracts.aspx: HTTP {r.status_code}")
+        sess = requests.Session()
+        sess.headers.update(BROWSER_HEADERS)
+
+        # Check if site is up
+        r = sess.get(f'{BASE}/BidContracts.aspx', timeout=20)
+        print(f"  GET BidContracts.aspx → {r.status_code}, {len(r.text)} chars")
+
+        if r.status_code != 200 or 'offline' in r.text.lower() or 'unavailable' in r.text.lower():
+            print("  ⚠ Site appears down or returning error page — skipping")
             return records
 
         html = r.text
 
-        # Extract form fields
-        def extract_hidden(name):
-            m = re.search(rf'name="{name}"[^>]*value="([^"]*)"', html)
-            if not m:
-                m = re.search(rf'id="{name}"[^>]*value="([^"]*)"', html)
-            return m.group(1) if m else ''
+        def hidden(name):
+            for attr in ['name', 'id']:
+                m = re.search(rf'{attr}="{re.escape(name)}"[^>]*value="([^"]*)"', html, re.IGNORECASE)
+                if m: return m.group(1)
+                m = re.search(rf'value="([^"]*)"[^>]*{attr}="{re.escape(name)}"', html, re.IGNORECASE)
+                if m: return m.group(1)
+            return ''
 
-        viewstate = extract_hidden('__VIEWSTATE')
-        viewstate_gen = extract_hidden('__VIEWSTATEGENERATOR')
-        event_validation = extract_hidden('__EVENTVALIDATION')
+        vs  = hidden('__VIEWSTATE')
+        vsg = hidden('__VIEWSTATEGENERATOR')
+        ev  = hidden('__EVENTVALIDATION')
 
-        if not viewstate:
-            print("  Could not extract ViewState")
+        print(f"  ViewState: {len(vs)} chars, EventValidation: {len(ev)} chars")
+        if not vs:
+            print("  ERROR: Could not extract ViewState — page structure may have changed")
             return records
 
-        print(f"  Got ViewState ({len(viewstate)} chars). Submitting export...")
-
-        # Step 2: POST to export all contracts as Excel
-        # Select "Both" (open + archived) and "ALL" entries, then Export
+        print("  POSTing Export All to Excel...")
         post_data = {
             '__EVENTTARGET': '',
             '__EVENTARGUMENT': '',
             '__LASTFOCUS': '',
-            '__VIEWSTATE': viewstate,
-            '__VIEWSTATEGENERATOR': viewstate_gen,
+            '__VIEWSTATE': vs,
+            '__VIEWSTATEGENERATOR': vsg,
             '__SCROLLPOSITIONX': '0',
             '__SCROLLPOSITIONY': '0',
             '__VIEWSTATEENCRYPTED': '',
-            '__EVENTVALIDATION': event_validation,
+            '__EVENTVALIDATION': ev,
             'ctl00$MainBody$ddlSearch': 'All Items',
             'ctl00$MainBody$ddlPages': 'ALL',
-            'ctl00$MainBody$grprdo': 'rdoBoth',  # Both open and archived
+            'ctl00$MainBody$grprdo': 'rdoBoth',
             'ctl00$MainBody$hdnAdmin': 'False',
             'ctl00$MainBody$btnExport': 'Export All to Excel',
         }
 
-        r2 = session.post(f'{BASE}/BidContracts.aspx', data=post_data, timeout=60)
+        r2 = sess.post(f'{BASE}/BidContracts.aspx', data=post_data, timeout=90)
+        ct = r2.headers.get('Content-Type', '')
+        print(f"  Response: {r2.status_code}, Content-Type: {ct}, Size: {len(r2.content)} bytes")
 
-        content_type = r2.headers.get('Content-Type', '')
-        print(f"  Response: HTTP {r2.status_code}, Content-Type: {content_type}, Size: {len(r2.content)} bytes")
+        is_excel = (
+            'spreadsheet' in ct or 'excel' in ct or 'octet' in ct or
+            r2.content[:4] in (b'PK\x03\x04', b'\xd0\xcf\x11\xe0')
+        )
 
-        if r2.status_code == 200 and (
-            'spreadsheet' in content_type or 'excel' in content_type or
-            'octet-stream' in content_type or len(r2.content) > 5000
-        ):
+        if is_excel:
             try:
                 import openpyxl
-                wb = openpyxl.load_workbook(io.BytesIO(r2.content), read_only=True)
+                wb = openpyxl.load_workbook(io.BytesIO(r2.content), read_only=True, data_only=True)
                 ws = wb.active
-                rows = list(ws.iter_rows(values_only=True))
-
-                if len(rows) < 2:
-                    print(f"  Excel had only {len(rows)} rows")
+                all_rows = list(ws.iter_rows(values_only=True))
+                print(f"  Excel: {len(all_rows)} rows")
+                if len(all_rows) < 2:
+                    print("  Excel too short — no data rows")
                     return records
 
-                headers = [str(h).strip() if h else '' for h in rows[0]]
-                print(f"  Excel columns: {headers}")
-                print(f"  Total rows: {len(rows) - 1}")
+                hdrs = [str(h or '').strip().lower() for h in all_rows[0]]
+                print(f"  Columns: {hdrs[:10]}")
 
-                # Map column names (flexible)
-                col = {}
-                for i, h in enumerate(headers):
-                    hl = h.lower()
-                    if 'contract' in hl and 'no' in hl: col['sol_num'] = i
-                    elif 'description' in hl: col['title'] = i
-                    elif 'agency' in hl: col['agency'] = i
-                    elif 'supplier' in hl and 'name' in hl: col['vendor'] = i
-                    elif 'start' in hl and 'date' in hl: col['start'] = i
-                    elif 'end' in hl and 'date' in hl: col['end'] = i
-                    elif 'amount' in hl or 'value' in hl: col['value'] = i
-                    elif 'category' in hl or 'commodity' in hl: col['category'] = i
-                    elif 'status' in hl: col['status'] = i
+                def col(*keywords):
+                    for kw in keywords:
+                        for i, h in enumerate(hdrs):
+                            if kw in h: return i
+                    return None
 
-                for row in rows[1:]:
-                    if not any(row):
-                        continue
+                i_title  = col('description', 'subject', 'title', 'commodity', 'bid')
+                i_agency = col('agency', 'department', 'org', 'bureau')
+                i_vendor = col('supplier', 'vendor', 'contractor', 'awardee')
+                i_solnum = col('contract no', 'contract number', 'number', 'solicit', 'bid no')
+                i_end    = col('end date', 'expir', 'close', 'deadline', 'due')
+                i_start  = col('start date', 'award date', 'effective', 'posted')
+                i_value  = col('amount', 'value', 'total', 'price')
 
-                    def cell(key, default=''):
-                        idx = col.get(key)
-                        if idx is None or idx >= len(row):
-                            return default
-                        v = row[idx]
-                        return str(v).strip() if v is not None else default
+                def cell(row, idx, default=''):
+                    if idx is None or idx >= len(row): return default
+                    v = row[idx]
+                    return str(v).strip() if v is not None else default
 
-                    title = cell('title') or cell('category', 'PA State Contract')
+                for row in all_rows[1:]:
+                    if not any(row): continue
+                    title = cell(row, i_title)
                     if not title or len(title) < 3:
-                        continue
+                        title = next((str(c).strip() for c in row if c and len(str(c).strip()) > 5), '')
+                    if not title: continue
 
-                    agency = cell('agency') or 'Commonwealth of Pennsylvania'
-                    sol_num = cell('sol_num')
-                    end_date_str = cell('end')
-                    start_date_str = cell('start')
-                    value_str = cell('value')
-                    status_raw = cell('status', 'active').lower()
-
-                    deadline = parse_date(end_date_str)
-                    posted = parse_date(start_date_str)
-                    value_cents = dollars_to_cents(value_str)
-
-                    # Determine status: if end_date is past, it's awarded/expired
-                    status = 'active'
-                    if deadline:
-                        try:
-                            end_dt = datetime.strptime(deadline[:10], '%Y-%m-%d')
-                            if end_dt < datetime.now():
-                                status = 'awarded'
-                        except:
-                            pass
-
-                    deadline_date = deadline[:10] if deadline else None
-                    dedup_hash = compute_dedup_hash(title, agency, deadline_date)
+                    agency   = cell(row, i_agency) or 'Commonwealth of Pennsylvania'
+                    sol_num  = cell(row, i_solnum)
+                    end_str  = cell(row, i_end)
+                    start_str= cell(row, i_start)
+                    val_str  = cell(row, i_value)
+                    vendor   = cell(row, i_vendor)
+                    deadline = parse_date(end_str)
+                    posted   = parse_date(start_str)
+                    dd_date  = deadline[:10] if deadline else None
+                    status   = 'awarded' if dd_date and is_past(dd_date) else 'active'
+                    desc     = f"Vendor/Supplier: {vendor}" if vendor else None
 
                     records.append({
                         'title': title[:500],
@@ -242,464 +278,419 @@ def fetch_pa_emarketplace_contracts():
                         'solicitation_number': sol_num[:100] if sol_num else None,
                         'deadline': deadline,
                         'posted_date': posted,
-                        'value_max': value_cents,
+                        'value_max': cents(val_str),
+                        'description': desc,
                         'place_of_performance_state': 'PA',
                         'url': f'{BASE}/BidContracts.aspx',
-                        'dedup_hash': dedup_hash,
+                        'dedup_hash': dedup(title, agency, dd_date),
                         'canonical_sources': ['state_pa_emarketplace'],
-                        'threshold_category': 'unknown',
-                        'description': f"Vendor: {cell('vendor')}" if cell('vendor') else None,
+                        'threshold_category': 'state',
                     })
 
                 print(f"  ✓ Parsed {len(records)} contracts from Excel")
 
+            except ImportError:
+                print("  openpyxl not installed — run: pip3 install openpyxl")
             except Exception as e:
-                print(f"  Excel parsing failed: {e}")
-                # Try as HTML if Excel fails
-                try:
-                    from html.parser import HTMLParser
-                    # Parse HTML table if it returned HTML instead
-                    rows_html = re.findall(r'<tr[^>]*>(.*?)</tr>', r2.text, re.DOTALL | re.IGNORECASE)
-                    print(f"  Falling back to HTML parsing: {len(rows_html)} rows")
-                except:
-                    pass
+                print(f"  Excel parse error: {e}")
+                traceback.print_exc()
         else:
-            print(f"  Got HTML response instead of Excel — trying to parse table")
-            # Parse the HTML table for any visible contracts
-            rows_html = re.findall(r'<tr[^>]*>(.*?)</tr>', r2.text, re.DOTALL | re.IGNORECASE)
-            for row in rows_html[1:]:
-                cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
-                if len(cells) >= 3 and cells[1] and len(cells[1]) > 5:
-                    title = cells[1]
-                    agency = cells[2] if len(cells) > 2 else 'Commonwealth of Pennsylvania'
-                    sol_num = cells[0] if cells[0] else None
-                    dedup_hash = compute_dedup_hash(title, agency, None)
-                    records.append({
-                        'title': title[:500],
-                        'agency_name': agency[:300],
-                        'source': 'state_pa_emarketplace',
-                        'status': 'active',
-                        'solicitation_number': sol_num,
-                        'place_of_performance_state': 'PA',
-                        'url': f'{BASE}/BidContracts.aspx',
-                        'dedup_hash': dedup_hash,
-                        'canonical_sources': ['state_pa_emarketplace'],
-                        'threshold_category': 'unknown',
-                    })
-            print(f"  HTML table parse: {len(records)} rows")
-
-    except Exception as e:
-        print(f"  Error: {e}")
-
-    return records
-
-
-# ============================================================
-# SOURCE 2: PA eMarketplace — Active Solicitations (Search.aspx)
-# ============================================================
-def fetch_pa_emarketplace_solicitations():
-    print("\n📋 PA eMarketplace — Active Solicitations...")
-    records = []
-    BASE = 'https://www.emarketplace.state.pa.us'
-
-    session = requests.Session()
-    session.headers.update(HEADERS_WEB)
-
-    # Try the direct solicitations page
-    search_urls = [
-        f'{BASE}/Search.aspx',
-        f'{BASE}/Solicitations/SolicitationSearch.aspx',
-    ]
-
-    for url in search_urls:
-        try:
-            r = session.get(url, timeout=20, allow_redirects=True)
-            if r.status_code != 200:
-                continue
-
-            html = r.text
-
-            # Look for data table rows
-            table_match = re.search(r'<table[^>]*>.*?</table>', html, re.DOTALL | re.IGNORECASE)
-            if not table_match:
-                continue
-
-            rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
-            found = 0
-            for row in rows:
-                cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                if len(cells) < 3:
-                    continue
-                cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
-                # Filter out header rows and empty rows
-                if cells[0].lower() in ('solicitation', 'number', 'sol', ''):
-                    continue
+            # Got HTML back — parse table
+            print("  Got HTML response — parsing table rows")
+            all_rows_html = re.findall(r'<tr[^>]*>(.*?)</tr>', r2.text, re.DOTALL | re.IGNORECASE)
+            print(f"  Found {len(all_rows_html)} table rows")
+            for row in all_rows_html[1:]:
+                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
+                if len(cells) < 2: continue
                 title = cells[1] if len(cells) > 1 else cells[0]
-                if not title or len(title) < 5:
-                    continue
-
-                sol_num = cells[0]
+                if not title or len(title) < 4: continue
                 agency = cells[2] if len(cells) > 2 else 'Commonwealth of Pennsylvania'
-                due_date = cells[-1] if len(cells) > 3 else None
-
-                deadline = parse_date(due_date)
-                deadline_date = deadline[:10] if deadline else None
-                dedup_hash = compute_dedup_hash(title, agency, deadline_date)
-
+                sol    = cells[0] if cells[0] else None
                 records.append({
                     'title': title[:500],
                     'agency_name': agency[:300],
                     'source': 'state_pa_emarketplace',
                     'status': 'active',
-                    'solicitation_number': sol_num[:100] if sol_num else None,
-                    'deadline': deadline,
+                    'solicitation_number': sol,
+                    'place_of_performance_state': 'PA',
+                    'url': f'{BASE}/BidContracts.aspx',
+                    'dedup_hash': dedup(title, agency, None),
+                    'canonical_sources': ['state_pa_emarketplace'],
+                    'threshold_category': 'state',
+                })
+            print(f"  HTML parse: {len(records)} rows")
+
+    except requests.exceptions.ConnectionError as e:
+        print(f"  Cannot connect to PA eMarketplace: {e}")
+    except requests.exceptions.Timeout:
+        print("  Timeout connecting to PA eMarketplace")
+    except Exception as e:
+        print(f"  Exception: {e}")
+        traceback.print_exc()
+
+    return records
+
+
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 2: PA eMarketplace — Active Solicitations
+# ══════════════════════════════════════════════════════════════════════════════
+def pa_emarketplace_solicitations():
+    print("\n━━━━ SOURCE 2: PA eMarketplace Active Solicitations ━━━━")
+    records = []
+    BASE = 'https://www.emarketplace.state.pa.us'
+    sess = requests.Session()
+    sess.headers.update(BROWSER_HEADERS)
+
+    for path in ['/ActiveSolicitations.aspx', '/Solicitations/SolicitationSearch.aspx',
+                 '/Search.aspx', '/Solicitations/']:
+        try:
+            url = BASE + path
+            r = sess.get(url, timeout=20, allow_redirects=True)
+            print(f"  {path} → {r.status_code}")
+            if r.status_code != 200: continue
+            if 'unavailable' in r.text.lower() or 'offline' in r.text.lower():
+                print("  Site unavailable")
+                break
+
+            rows_html = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
+            found = 0
+            for row in rows_html:
+                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
+                if len(cells) < 3: continue
+                title = cells[1] if cells[1] and len(cells[1]) > 4 else cells[0]
+                if not title or len(title) < 4: continue
+                if title.lower() in ('description', 'solicitation', 'title', 'bid', 'subject'): continue
+                agency = cells[2] if len(cells) > 2 else 'Commonwealth of Pennsylvania'
+                sol    = cells[0]
+                due    = cells[-1] if len(cells) > 3 else None
+                dl     = parse_date(due)
+                dd_date = dl[:10] if dl else None
+                records.append({
+                    'title': title[:500],
+                    'agency_name': agency[:300],
+                    'source': 'state_pa_emarketplace',
+                    'status': 'active',
+                    'solicitation_number': sol[:100] if sol else None,
+                    'deadline': dl,
                     'place_of_performance_state': 'PA',
                     'url': url,
-                    'dedup_hash': dedup_hash,
+                    'dedup_hash': dedup(title, agency, dd_date),
                     'canonical_sources': ['state_pa_emarketplace'],
-                    'threshold_category': 'unknown',
+                    'threshold_category': 'state',
                 })
                 found += 1
 
-            if found > 0:
-                print(f"  ✓ Found {found} solicitations from {url}")
-                break
+            print(f"  Parsed {found} solicitations")
+            if found > 0: break  # got data, don't try other paths
 
+        except requests.exceptions.ConnectionError:
+            print(f"  Cannot connect to {path}")
+            break
+        except requests.exceptions.Timeout:
+            print(f"  Timeout on {path}")
+            continue
         except Exception as e:
-            print(f"  Error for {url}: {e}")
-
-    if not records:
-        print("  No solicitations found (PA eMarketplace may require POST/ViewState)")
+            print(f"  Error on {path}: {e}")
 
     return records
 
 
-# ============================================================
-# SOURCE 3: PA Treasury Contracts (contracts.patreasury.gov)
-# ============================================================
-def fetch_pa_treasury_contracts():
-    print("\n🏛️ PA Treasury Contracts...")
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 3: City of Pittsburgh — BonfireHub API
+# ══════════════════════════════════════════════════════════════════════════════
+def pittsburgh_bonfire():
+    print("\n━━━━ SOURCE 3: City of Pittsburgh (BonfireHub) ━━━━")
     records = []
 
-    session = requests.Session()
-    session.headers.update(HEADERS_WEB)
-
-    try:
-        # PA Treasury has a search API used by their frontend
-        # Try common API patterns
-        api_urls = [
-            'https://contracts.patreasury.gov/api/contracts?limit=500&offset=0',
-            'https://contracts.patreasury.gov/contract/search?format=json&limit=500',
-            'https://www.patreasury.gov/Transparency/api/contracts?limit=500',
-        ]
-
-        for api_url in api_urls:
-            try:
-                r = session.get(api_url, timeout=15,
-                               headers={**HEADERS_WEB, 'Accept': 'application/json'})
-                if r.status_code == 200:
-                    data = r.json()
-                    print(f"  Found API at {api_url}: {type(data)}")
-                    if isinstance(data, list) and len(data) > 0:
-                        print(f"  Keys: {list(data[0].keys())}")
-                        for row in data:
-                            title = (row.get('description') or row.get('contract_description') or
-                                    row.get('project_name') or row.get('title') or '')
-                            if not title:
-                                continue
-                            agency = row.get('agency') or row.get('department') or 'Commonwealth of Pennsylvania'
-                            value_str = row.get('amount') or row.get('value') or row.get('contract_amount')
-                            dedup_hash = compute_dedup_hash(title, agency, None)
-                            records.append({
-                                'title': str(title)[:500],
-                                'agency_name': str(agency)[:300],
-                                'source': 'state_pa_emarketplace',
-                                'status': 'awarded',
-                                'value_max': dollars_to_cents(value_str),
-                                'place_of_performance_state': 'PA',
-                                'url': api_url,
-                                'dedup_hash': dedup_hash,
-                                'canonical_sources': ['state_pa_emarketplace'],
-                                'threshold_category': 'unknown',
-                            })
-                        print(f"  ✓ {len(records)} records from Treasury API")
-                        break
-            except Exception as e:
-                pass  # Try next URL
-
-        if not records:
-            # Try fetching the search page and extracting table data
-            r = session.get('https://contracts.patreasury.gov/search.aspx', timeout=20)
-            if r.status_code == 200:
-                # Extract any visible contract rows
-                rows = re.findall(r'<tr[^>]*class="[^"]*(?:odd|even|row)[^"]*"[^>]*>(.*?)</tr>',
-                                 r.text, re.DOTALL | re.IGNORECASE)
-                for row in rows[:500]:
-                    cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                    cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
-                    if len(cells) >= 2 and cells[0] and len(cells[0]) > 3:
-                        title = cells[0]
-                        agency = cells[1] if len(cells) > 1 else 'Commonwealth of Pennsylvania'
-                        dedup_hash = compute_dedup_hash(title, agency, None)
-                        records.append({
-                            'title': title[:500],
-                            'agency_name': agency[:300],
-                            'source': 'state_pa_emarketplace',
-                            'status': 'awarded',
-                            'place_of_performance_state': 'PA',
-                            'url': 'https://contracts.patreasury.gov/search.aspx',
-                            'dedup_hash': dedup_hash,
-                            'canonical_sources': ['state_pa_emarketplace'],
-                            'threshold_category': 'unknown',
-                        })
-                print(f"  HTML table: {len(records)} records from Treasury page")
-
-    except Exception as e:
-        print(f"  Error: {e}")
-
-    return records
-
-
-# ============================================================
-# SOURCE 4: City of Pittsburgh (BonfireHub public solicitations)
-# ============================================================
-def fetch_pittsburgh_city():
-    print("\n🏙️ City of Pittsburgh Solicitations...")
-    records = []
-
-    session = requests.Session()
-    session.headers.update({**HEADERS_WEB, 'Accept': 'application/json'})
-
+    # Try BonfireHub API
     bonfire_urls = [
-        'https://pittsburghpa.bonfirehub.com/api/opportunities/public?page=1&perPage=100&status=open',
-        'https://pittsburghpa.bonfirehub.com/portal/opportunities/public?format=json',
-        'https://pittsburghpa.ionwave.net/CurrentSolicitations.aspx',
+        'https://pittsburgh.bonfirehub.com/api/opportunities?page=1&status=open',
+        'https://pittsburgh.bonfirehub.com/portal/opportunities/open',
+        'https://pittsburgh.bonfirehub.com/opportunities',
     ]
 
-    for url in bonfire_urls:
+    for api_url in bonfire_urls:
         try:
-            r = session.get(url, timeout=15)
+            r = requests.get(api_url, headers={
+                'Accept': 'application/json',
+                'User-Agent': BROWSER_HEADERS['User-Agent'],
+            }, timeout=20)
+            print(f"  {api_url} → {r.status_code}")
             if r.status_code == 200:
-                content_type = r.headers.get('Content-Type', '')
-
-                if 'json' in content_type:
+                try:
                     data = r.json()
-                    items = data if isinstance(data, list) else data.get('data', data.get('opportunities', []))
-                    for item in items:
-                        title = item.get('title') or item.get('name') or item.get('description') or ''
-                        if not title:
-                            continue
-                        agency = 'City of Pittsburgh'
-                        deadline_str = item.get('closingDate') or item.get('deadline') or item.get('due_date')
-                        deadline = parse_date(str(deadline_str)[:20] if deadline_str else None)
-                        deadline_date = deadline[:10] if deadline else None
-                        dedup_hash = compute_dedup_hash(title, agency, deadline_date)
-                        records.append({
-                            'title': str(title)[:500],
-                            'agency_name': agency,
-                            'source': 'local_pittsburgh',
-                            'status': 'active',
-                            'deadline': deadline,
-                            'place_of_performance_city': 'Pittsburgh',
-                            'place_of_performance_state': 'PA',
-                            'url': url,
-                            'dedup_hash': dedup_hash,
-                            'canonical_sources': ['local_pittsburgh'],
-                            'threshold_category': 'unknown',
-                        })
-                    if records:
-                        print(f"  ✓ {len(records)} from BonfireHub JSON")
-                        break
-                else:
-                    # HTML parse
-                    rows = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
-                    for row in rows[1:]:
-                        cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                        cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
-                        if len(cells) >= 2 and cells[0] and len(cells[0]) > 5:
-                            title = cells[0]
-                            agency = 'City of Pittsburgh'
-                            dedup_hash = compute_dedup_hash(title, agency, None)
+                    opps = data if isinstance(data, list) else data.get('opportunities', data.get('data', data.get('results', [])))
+                    if isinstance(opps, list) and len(opps) > 0:
+                        for opp in opps:
+                            title  = (opp.get('title') or opp.get('name') or opp.get('description', ''))[:500]
+                            if not title or len(title) < 4: continue
+                            agency = opp.get('organization', opp.get('agency', 'City of Pittsburgh'))[:300]
+                            dl_str = opp.get('deadline') or opp.get('close_date') or opp.get('due_date')
+                            dl     = parse_date(dl_str)
+                            dd     = dl[:10] if dl else None
+                            sol    = str(opp.get('id') or opp.get('reference_number', ''))[:100]
                             records.append({
-                                'title': title[:500],
+                                'title': title,
                                 'agency_name': agency,
                                 'source': 'local_pittsburgh',
                                 'status': 'active',
-                                'place_of_performance_city': 'Pittsburgh',
+                                'solicitation_number': sol or None,
+                                'deadline': dl,
                                 'place_of_performance_state': 'PA',
-                                'url': url,
-                                'dedup_hash': dedup_hash,
+                                'place_of_performance_city': 'Pittsburgh',
+                                'url': opp.get('url') or api_url,
+                                'dedup_hash': dedup(title, agency, dd),
                                 'canonical_sources': ['local_pittsburgh'],
-                                'threshold_category': 'unknown',
+                                'threshold_category': 'local',
                             })
-                    if records:
-                        print(f"  ✓ {len(records)} from Pittsburgh HTML")
-                        break
-        except Exception as e:
-            pass
+                        print(f"  ✓ Parsed {len(records)} from BonfireHub JSON")
+                        return records
+                except json.JSONDecodeError:
+                    pass  # Not JSON, try next
 
-    if not records:
-        print("  No Pittsburgh data found (BonfireHub may require login)")
+        except requests.exceptions.ConnectionError:
+            print(f"  Cannot connect to BonfireHub Pittsburgh")
+        except requests.exceptions.Timeout:
+            print(f"  Timeout on BonfireHub Pittsburgh")
+        except Exception as e:
+            print(f"  Error: {e}")
+
+    # Fallback: try IonWave
+    try:
+        r = requests.get('https://pittsburgh.ionwave.net/Bids.aspx',
+                         headers=BROWSER_HEADERS, timeout=20)
+        print(f"  IonWave Pittsburgh → {r.status_code}")
+        if r.status_code == 200:
+            rows = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
+            for row in rows:
+                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
+                if len(cells) < 2: continue
+                title = cells[0] if cells[0] and len(cells[0]) > 4 else ''
+                if not title: continue
+                records.append({
+                    'title': title[:500],
+                    'agency_name': 'City of Pittsburgh',
+                    'source': 'local_pittsburgh',
+                    'status': 'active',
+                    'place_of_performance_state': 'PA',
+                    'place_of_performance_city': 'Pittsburgh',
+                    'url': 'https://pittsburgh.ionwave.net/Bids.aspx',
+                    'dedup_hash': dedup(title, 'City of Pittsburgh', None),
+                    'canonical_sources': ['local_pittsburgh'],
+                    'threshold_category': 'local',
+                })
+            print(f"  IonWave: {len(records)} rows")
+    except Exception as e:
+        print(f"  IonWave error: {e}")
+
     return records
 
 
-# ============================================================
-# SOURCE 5: Allegheny County Purchasing
-# ============================================================
-def fetch_allegheny_county():
-    print("\n🏛️ Allegheny County Purchasing...")
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 4: Allegheny County — BonfireHub API
+# ══════════════════════════════════════════════════════════════════════════════
+def allegheny_bonfire():
+    print("\n━━━━ SOURCE 4: Allegheny County (BonfireHub) ━━━━")
     records = []
 
-    session = requests.Session()
-    session.headers.update(HEADERS_WEB)
-
-    urls_to_try = [
-        # IonWave is common for county procurement
-        'https://allegheny.ionwave.net/CurrentSolicitations.aspx',
-        'https://www.alleghenycounty.us/county-services/county-purchasing/purchasing-bids',
-        # BonfireHub
-        'https://allegheny.bonfirehub.com/api/opportunities/public?page=1&perPage=200',
+    bonfire_urls = [
+        'https://allegheny.bonfirehub.com/api/opportunities?page=1&status=open',
+        'https://allegheny.bonfirehub.com/portal/opportunities/open',
+        'https://allegheny.bonfirehub.com/opportunities',
     ]
 
-    for url in urls_to_try:
+    for api_url in bonfire_urls:
         try:
-            r = session.get(url, timeout=20)
-            if r.status_code != 200:
-                continue
-
-            content_type = r.headers.get('Content-Type', '')
-
-            if 'json' in content_type:
-                data = r.json()
-                items = data if isinstance(data, list) else data.get('data', data.get('opportunities', []))
-                for item in items:
-                    title = item.get('title') or item.get('name') or item.get('description') or ''
-                    if not title:
-                        continue
-                    agency = 'Allegheny County'
-                    deadline_str = item.get('closingDate') or item.get('deadline') or item.get('due_date')
-                    deadline = parse_date(str(deadline_str)[:20] if deadline_str else None)
-                    deadline_date = deadline[:10] if deadline else None
-                    dedup_hash = compute_dedup_hash(title, agency, deadline_date)
-                    records.append({
-                        'title': str(title)[:500],
-                        'agency_name': agency,
-                        'source': 'local_allegheny',
-                        'status': 'active',
-                        'deadline': deadline,
-                        'place_of_performance_city': 'Pittsburgh',
-                        'place_of_performance_state': 'PA',
-                        'url': url,
-                        'dedup_hash': dedup_hash,
-                        'canonical_sources': ['local_allegheny'],
-                        'threshold_category': 'unknown',
-                    })
-                if records:
-                    print(f"  ✓ {len(records)} from Allegheny JSON API")
-                    break
-            else:
-                # Parse HTML table
-                html = r.text
-                rows = re.findall(r'<tr[^>]*>(.*?)</tr>', html, re.DOTALL | re.IGNORECASE)
-                found = 0
-                for row in rows:
-                    cells = re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL | re.IGNORECASE)
-                    if len(cells) < 2:
-                        continue
-                    cells = [re.sub(r'<[^>]+>', '', c).strip() for c in cells]
-
-                    # Look for bid/solicitation rows
-                    title = cells[0] if cells[0] and len(cells[0]) > 5 else None
-                    if not title:
-                        continue
-                    # Skip header rows
-                    title_lower = title.lower()
-                    if any(word in title_lower for word in ['bid number', 'solicitation', 'description', 'header']):
-                        continue
-
-                    agency = 'Allegheny County'
-                    deadline_str = cells[-1] if len(cells) > 1 else None
-                    deadline = parse_date(deadline_str)
-                    deadline_date = deadline[:10] if deadline else None
-                    dedup_hash = compute_dedup_hash(title, agency, deadline_date)
-
-                    records.append({
-                        'title': title[:500],
-                        'agency_name': agency,
-                        'source': 'local_allegheny',
-                        'status': 'active',
-                        'deadline': deadline,
-                        'place_of_performance_city': 'Pittsburgh',
-                        'place_of_performance_state': 'PA',
-                        'url': url,
-                        'dedup_hash': dedup_hash,
-                        'canonical_sources': ['local_allegheny'],
-                        'threshold_category': 'unknown',
-                    })
-                    found += 1
-
-                if found > 0:
-                    print(f"  ✓ {found} rows from {url}")
-                    break
-
+            r = requests.get(api_url, headers={
+                'Accept': 'application/json',
+                'User-Agent': BROWSER_HEADERS['User-Agent'],
+            }, timeout=20)
+            print(f"  {api_url} → {r.status_code}")
+            if r.status_code == 200:
+                try:
+                    data = r.json()
+                    opps = data if isinstance(data, list) else data.get('opportunities', data.get('data', data.get('results', [])))
+                    if isinstance(opps, list) and len(opps) > 0:
+                        for opp in opps:
+                            title  = (opp.get('title') or opp.get('name') or '')[:500]
+                            if not title or len(title) < 4: continue
+                            agency = opp.get('organization', opp.get('agency', 'Allegheny County'))[:300]
+                            dl_str = opp.get('deadline') or opp.get('close_date') or opp.get('due_date')
+                            dl     = parse_date(dl_str)
+                            dd     = dl[:10] if dl else None
+                            sol    = str(opp.get('id') or opp.get('reference_number', ''))[:100]
+                            records.append({
+                                'title': title,
+                                'agency_name': agency,
+                                'source': 'local_allegheny',
+                                'status': 'active',
+                                'solicitation_number': sol or None,
+                                'deadline': dl,
+                                'place_of_performance_state': 'PA',
+                                'place_of_performance_city': 'Pittsburgh',
+                                'url': opp.get('url') or api_url,
+                                'dedup_hash': dedup(title, agency, dd),
+                                'canonical_sources': ['local_allegheny'],
+                                'threshold_category': 'local',
+                            })
+                        print(f"  ✓ Parsed {len(records)} from Allegheny BonfireHub JSON")
+                        return records
+                except json.JSONDecodeError:
+                    pass
+        except requests.exceptions.ConnectionError:
+            print(f"  Cannot connect to BonfireHub Allegheny")
+        except requests.exceptions.Timeout:
+            print(f"  Timeout on BonfireHub Allegheny")
         except Exception as e:
-            print(f"  Error for {url}: {e}")
+            print(f"  Error: {e}")
 
-    if not records:
-        print("  No Allegheny County data found")
+    # Fallback: Allegheny County purchasing page
+    try:
+        for url in [
+            'https://www.alleghenycounty.us/county-services/purchasing/active-bids.aspx',
+            'https://www.alleghenycounty.us/purchasing/bids',
+        ]:
+            r = requests.get(url, headers=BROWSER_HEADERS, timeout=20)
+            print(f"  {url} → {r.status_code}")
+            if r.status_code != 200: continue
+            rows = re.findall(r'<tr[^>]*>(.*?)</tr>', r.text, re.DOTALL | re.IGNORECASE)
+            for row in rows:
+                cells = [strip_tags(c) for c in re.findall(r'<td[^>]*>(.*?)</td>', row, re.DOTALL)]
+                if len(cells) < 2: continue
+                title = cells[0] if cells[0] and len(cells[0]) > 4 else ''
+                if not title: continue
+                records.append({
+                    'title': title[:500],
+                    'agency_name': 'Allegheny County',
+                    'source': 'local_allegheny',
+                    'status': 'active',
+                    'place_of_performance_state': 'PA',
+                    'place_of_performance_city': 'Pittsburgh',
+                    'url': url,
+                    'dedup_hash': dedup(title, 'Allegheny County', None),
+                    'canonical_sources': ['local_allegheny'],
+                    'threshold_category': 'local',
+                })
+            if records:
+                print(f"  County site: {len(records)} rows")
+                break
+    except Exception as e:
+        print(f"  County site error: {e}")
+
     return records
 
 
-# ============================================================
+# ══════════════════════════════════════════════════════════════════════════════
+# SOURCE 5: SAM.gov — PA Active Solicitations
+# ══════════════════════════════════════════════════════════════════════════════
+def samgov_pa_solicitations():
+    print("\n━━━━ SOURCE 5: SAM.gov PA Solicitations ━━━━")
+    records = []
+
+    if not SAMGOV_KEY or SAMGOV_KEY.startswith('your_'):
+        print("  Skipping — SAMGOV_API_KEY not set in .env.local")
+        return records
+
+    try:
+        from datetime import timedelta
+        today = datetime.now().strftime('%m/%d/%Y')
+        future = (datetime.now() + timedelta(days=365)).strftime('%m/%d/%Y')
+
+        url = (
+            f"https://api.sam.gov/opportunities/v2/search"
+            f"?api_key={SAMGOV_KEY}"
+            f"&postedFrom=01/01/2024&postedTo={today}"
+            f"&ptype=o,k,r,s,g,a"
+            f"&state=PA"
+            f"&limit=1000"
+            f"&offset=0"
+        )
+
+        r = requests.get(url, timeout=30)
+        print(f"  SAM.gov PA → {r.status_code}, {len(r.text)} chars")
+
+        if r.status_code == 200:
+            data = r.json()
+            opps = data.get('opportunitiesData', [])
+            print(f"  Found {len(opps)} opportunities")
+
+            for opp in opps:
+                title   = (opp.get('title') or '')[:500]
+                if not title: continue
+                agency  = (opp.get('fullParentPathName') or opp.get('organizationName') or 'US Federal Government')[:300]
+                sol_num = (opp.get('solicitationNumber') or '')[:100]
+                dl_str  = opp.get('responseDeadLine') or opp.get('archiveDate')
+                dl      = parse_date(dl_str)
+                dd      = dl[:10] if dl else None
+                posted  = parse_date(opp.get('postedDate'))
+                opp_url = f"https://sam.gov/opp/{opp.get('noticeId', '')}/view"
+                naics   = opp.get('naicsCode', '')
+
+                records.append({
+                    'title': title,
+                    'agency_name': agency,
+                    'source': 'federal_samgov',
+                    'status': 'active',
+                    'solicitation_number': sol_num or None,
+                    'naics_code': int(naics) if naics and str(naics).isdigit() else None,
+                    'deadline': dl,
+                    'posted_date': posted,
+                    'place_of_performance_state': 'PA',
+                    'url': opp_url,
+                    'description': opp.get('description', '')[:1000] or None,
+                    'set_aside_type': opp.get('typeOfSetAsideDescription', '')[:100] or None,
+                    'dedup_hash': dedup(title, agency, dd),
+                    'canonical_sources': ['federal_samgov'],
+                    'threshold_category': 'federal',
+                })
+
+            print(f"  ✓ {len(records)} SAM.gov PA opportunities")
+        else:
+            print(f"  SAM.gov error: {r.text[:200]}")
+
+    except Exception as e:
+        print(f"  SAM.gov exception: {e}")
+        traceback.print_exc()
+
+    return records
+
+
+# ══════════════════════════════════════════════════════════════════════════════
 # MAIN
-# ============================================================
-def main():
-    print("=" * 60)
-    print("PA State & Local Opportunities Ingestion")
-    print(f"Supabase: {SUPABASE_URL}")
-    print("=" * 60)
+# ══════════════════════════════════════════════════════════════════════════════
+if __name__ == '__main__':
+    print("\n" + "═"*60)
+    print(" PA State & Local Opportunities Ingestion")
+    print("═"*60)
 
     grand_total = 0
+    seen_hashes = set()
 
-    # Source 1: PA eMarketplace contracts (Excel export)
-    contracts = fetch_pa_emarketplace_contracts()
-    if contracts:
-        n = batch_upsert_all(contracts, 'PA eMarketplace Contracts')
-        grand_total += n
-        print(f"  → {n} contracts inserted")
+    def run_and_upsert(fn, label):
+        global grand_total
+        try:
+            recs = fn()
+            # Deduplicate within session
+            unique = []
+            for r in recs:
+                h = r.get('dedup_hash', '')
+                if h and h not in seen_hashes:
+                    seen_hashes.add(h)
+                    unique.append(r)
+            if unique:
+                grand_total += upsert(unique, label)
+            else:
+                print(f"  [{label}] 0 unique records")
+        except Exception as e:
+            print(f"  [{label}] FATAL: {e}")
+            traceback.print_exc()
 
-    # Source 2: PA eMarketplace active solicitations
-    solicitations = fetch_pa_emarketplace_solicitations()
-    if solicitations:
-        n = batch_upsert_all(solicitations, 'PA eMarketplace Solicitations')
-        grand_total += n
-        print(f"  → {n} solicitations inserted")
+    run_and_upsert(pa_emarketplace_contracts,    "PA eMarketplace Contracts")
+    run_and_upsert(pa_emarketplace_solicitations,"PA eMarketplace Solicitations")
+    run_and_upsert(pittsburgh_bonfire,            "Pittsburgh BonfireHub")
+    run_and_upsert(allegheny_bonfire,             "Allegheny BonfireHub")
+    run_and_upsert(samgov_pa_solicitations,       "SAM.gov PA")
 
-    # Source 3: PA Treasury
-    treasury = fetch_pa_treasury_contracts()
-    if treasury:
-        n = batch_upsert_all(treasury, 'PA Treasury')
-        grand_total += n
-        print(f"  → {n} treasury contracts inserted")
-
-    # Source 4: City of Pittsburgh
-    pgh = fetch_pittsburgh_city()
-    if pgh:
-        n = batch_upsert_all(pgh, 'Pittsburgh City')
-        grand_total += n
-        print(f"  → {n} Pittsburgh records inserted")
-
-    # Source 5: Allegheny County
-    allegheny = fetch_allegheny_county()
-    if allegheny:
-        n = batch_upsert_all(allegheny, 'Allegheny County')
-        grand_total += n
-        print(f"  → {n} Allegheny records inserted")
-
-    print("\n" + "=" * 60)
-    print(f"✅ TOTAL INSERTED: {grand_total} state/local records")
-    print("=" * 60)
-
-if __name__ == '__main__':
-    main()
+    print("\n" + "═"*60)
+    print(f" ✅ Total upserted this run: {grand_total}")
+    print("═"*60)
