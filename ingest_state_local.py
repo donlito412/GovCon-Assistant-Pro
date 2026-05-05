@@ -592,60 +592,86 @@ def samgov_pa_solicitations():
 
     try:
         from datetime import timedelta
-        today = datetime.now().strftime('%m/%d/%Y')
-        future = (datetime.now() + timedelta(days=365)).strftime('%m/%d/%Y')
+        today  = datetime.now()
+        # Fetch last 365 days — captures all active PA federal solicitations
+        from_dt = (today - timedelta(days=365)).strftime('%m/%d/%Y')
+        to_dt   = today.strftime('%m/%d/%Y')
+        today_s = today.strftime('%Y-%m-%d')
 
-        url = (
-            f"https://api.sam.gov/opportunities/v2/search"
-            f"?api_key={SAMGOV_KEY}"
-            f"&postedFrom=01/01/2024&postedTo={today}"
-            f"&ptype=o,k,r,s,g,a"
-            f"&state=PA"
-            f"&limit=1000"
-            f"&offset=0"
-        )
+        # Paginate through all results (SAM.gov max 1,000 per page)
+        PAGE_LIMIT = 1000
+        offset = 0
+        all_opps = []
 
-        r = requests.get(url, timeout=30)
-        print(f"  SAM.gov PA → {r.status_code}, {len(r.text)} chars")
+        while True:
+            url = (
+                f"https://api.sam.gov/opportunities/v2/search"
+                f"?api_key={SAMGOV_KEY}"
+                f"&postedFrom={from_dt}&postedTo={to_dt}"
+                f"&ptype=o,k,r,s,p,u,a"
+                f"&state=PA"
+                f"&status=active"
+                f"&limit={PAGE_LIMIT}"
+                f"&offset={offset}"
+            )
+            r = requests.get(url, timeout=60)
+            print(f"  SAM.gov offset={offset} → {r.status_code}, {len(r.text)} chars")
+            if r.status_code != 200:
+                print(f"  SAM.gov error: {r.text[:200]}")
+                break
+            data     = r.json()
+            page_ops = data.get('opportunitiesData', [])
+            total    = data.get('totalRecords', 0)
+            all_opps.extend(page_ops)
+            print(f"    Got {len(page_ops)} | Running total: {len(all_opps)} / {total}")
+            if len(all_opps) >= total or len(page_ops) == 0:
+                break
+            offset += PAGE_LIMIT
+            time.sleep(0.3)  # courtesy delay
 
-        if r.status_code == 200:
-            data = r.json()
-            opps = data.get('opportunitiesData', [])
-            print(f"  Found {len(opps)} opportunities")
+        print(f"  SAM.gov: {len(all_opps)} total PA active opportunities")
 
-            for opp in opps:
-                title   = (opp.get('title') or '')[:500]
-                if not title: continue
-                agency  = (opp.get('fullParentPathName') or opp.get('organizationName') or 'US Federal Government')[:300]
-                sol_num = (opp.get('solicitationNumber') or '')[:100]
-                dl_str  = opp.get('responseDeadLine') or opp.get('archiveDate')
-                dl      = parse_date(dl_str)
-                dd      = dl[:10] if dl else None
-                posted  = parse_date(opp.get('postedDate'))
-                opp_url = f"https://sam.gov/opp/{opp.get('noticeId', '')}/view"
-                naics   = opp.get('naicsCode', '')
+        for opp in all_opps:
+            title   = (opp.get('title') or '')[:500]
+            if not title: continue
+            agency  = (opp.get('fullParentPathName') or opp.get('organizationName') or 'US Federal Government')[:300]
+            sol_num = (opp.get('solicitationNumber') or '')[:100]
+            dl_str  = opp.get('responseDeadLine') or opp.get('archiveDate')
+            dl      = parse_date(dl_str)
+            dd      = dl[:10] if dl else None
+            posted  = parse_date(opp.get('postedDate'))
+            opp_url = f"https://sam.gov/opp/{opp.get('noticeId', '')}/view"
+            naics   = opp.get('naicsCode', '')
+            pop     = opp.get('placeOfPerformance', {}) or {}
+            pop_state = (pop.get('state', {}) or {}).get('code', 'PA')
+            pop_city  = (pop.get('city', {}) or {}).get('name', '')
+            pop_zip   = (pop.get('zip') or '')[:10]
+            # Determine status: active only if deadline is in future or unknown
+            status = 'expired' if (dd and dd < today_s) else 'active'
 
-                records.append({
-                    'title': title,
-                    'agency_name': agency,
-                    'source': 'federal_samgov',
-                    'status': 'active',
-                    'solicitation_number': sol_num or None,
-                    'naics_code': int(naics) if naics and str(naics).isdigit() else None,
-                    'deadline': dl,
-                    'posted_date': posted,
-                    'place_of_performance_state': 'PA',
-                    'url': opp_url,
-                    'description': opp.get('description', '')[:1000] or None,
-                    'set_aside_type': opp.get('typeOfSetAsideDescription', '')[:100] or None,
-                    'dedup_hash': dedup(title, agency, dd),
-                    'canonical_sources': ['federal_samgov'],
-                    'threshold_category': 'federal',
-                })
+            records.append({
+                'title': title,
+                'agency_name': agency,
+                'source': 'federal_samgov',
+                'status': status,
+                'solicitation_number': sol_num or None,
+                'naics_code': int(naics) if naics and str(naics).isdigit() else None,
+                'deadline': dl,
+                'posted_date': posted,
+                'place_of_performance_state': pop_state or 'PA',
+                'place_of_performance_city': pop_city or None,
+                'place_of_performance_zip': pop_zip or None,
+                'url': opp_url,
+                'description': (opp.get('description') or '')[:1000] or None,
+                'set_aside_type': (opp.get('typeOfSetAsideDescription') or '')[:100] or None,
+                'dedup_hash': dedup(title, agency, dd),
+                'canonical_sources': ['federal_samgov'],
+                'threshold_category': 'federal',
+            })
 
-            print(f"  ✓ {len(records)} SAM.gov PA opportunities")
-        else:
-            print(f"  SAM.gov error: {r.text[:200]}")
+        # Only keep active records
+        records = [r for r in records if r.get('status') == 'active']
+        print(f"  ✓ {len(records)} active SAM.gov PA opportunities")
 
     except Exception as e:
         print(f"  SAM.gov exception: {e}")

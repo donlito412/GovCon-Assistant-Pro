@@ -185,55 +185,37 @@ const PITTSBURGH_MSA_CITIES = new Set([
 ]);
 
 /**
- * Returns true if the SAM.gov opportunity's place of performance is in the Pittsburgh MSA.
+ * Returns true if the SAM.gov opportunity is relevant to Pennsylvania-based bidders.
  *
- * Inclusion logic (most → least specific):
- *   1. ZIP starts with 15 (Allegheny + surrounding counties)
- *   2. County is in Pittsburgh MSA counties
- *   3. City name matches Pittsburgh MSA cities
- *   4. No place-of-performance data at all → include if issuing office is in PA
- *      (better to include more than miss local opportunities)
+ * Strategy: include ALL PA-state records. Pennsylvania companies can bid on any
+ * contract where place-of-performance is PA or unspecified. Filtering down to just
+ * Pittsburgh MSA was rejecting thousands of statewide contracts that Pittsburgh
+ * companies are fully eligible to bid on. Users can further filter by city/zip in the UI.
+ *
+ * Exclude only: explicitly non-PA records with a clear out-of-state city/zip.
  */
 export function isPittsburghOpportunity(opp: SamGovOpportunity): boolean {
   const pop = opp.placeOfPerformance;
 
-  // No place-of-performance: check the contracting office ZIP/state
-  if (!pop || (!pop.zip && !pop.city?.name && !pop.county?.name)) {
-    const officeState = opp.officeAddress?.state?.toUpperCase() ?? '';
+  // No place-of-performance data at all → include if PA office or unknown location
+  if (!pop || (!pop.zip && !pop.city?.name && !pop.county?.name && !pop.state?.code && !pop.state?.name)) {
+    const officeState = (opp.officeAddress?.state ?? '').toUpperCase();
     const officeZip = opp.officeAddress?.zipcode ?? '';
-    // If the contracting office is in PA, keep it — it's likely a Pittsburgh-area award
-    if (officeState === 'PA' || officeZip.startsWith('15')) return true;
-    // Also keep statewide opportunities with no specific city
-    return false;
+    // Keep if PA office, or if location is truly unspecified (statewide/national)
+    return officeState === 'PA' || officeZip.startsWith('15') || officeState === '';
   }
 
-  // Must be in Pennsylvania
+  // If state is specified, only exclude records explicitly outside PA
   const stateCode = (pop.state?.code ?? '').toUpperCase();
   const stateName = (pop.state?.name ?? '').toUpperCase();
-  const isPA = stateCode === 'PA' || stateName === 'PENNSYLVANIA' || stateName === 'PA';
-  if (!isPA) return false;
 
-  // 1. ZIP code filter — any 15xxx zip is Pittsburgh metro
-  if (pop.zip) {
-    const zip5 = pop.zip.slice(0, 5);
-    if (zip5.startsWith('15') || isPittsburghAreaZip(pop.zip)) return true;
-  }
+  // No state specified → keep (nationwide contract, PA companies can bid)
+  if (!stateCode && !stateName) return true;
 
-  // 2. County filter
-  if (pop.county?.name && isPittsburghAreaCounty(pop.county.name)) return true;
+  // Explicitly PA → keep
+  if (stateCode === 'PA' || stateName === 'PENNSYLVANIA' || stateName === 'PA') return true;
 
-  // 3. City filter
-  const city = (pop.city?.name ?? '').toLowerCase().trim();
-  if (city && PITTSBURGH_MSA_CITIES.has(city)) return true;
-  // Partial match for composite city names
-  for (const msaCity of PITTSBURGH_MSA_CITIES) {
-    if (city.includes(msaCity)) return true;
-  }
-
-  // 4. Statewide PA opportunity with no specific city → include
-  //    (some federal contracts list "PA statewide" — we want those)
-  if ((stateCode === 'PA' || stateName === 'PENNSYLVANIA') && !pop.city?.name) return true;
-
+  // Explicitly another state → exclude (e.g., California, Texas)
   return false;
 }
 
