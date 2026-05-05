@@ -116,7 +116,8 @@ function ContractsPageInner() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contracts</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Pittsburgh-area opportunities — federal, state, local, and educational
+            Active Pittsburgh-area opportunities — bid before the deadline
+            <span className="text-blue-600 font-medium ml-2">(Closed contracts → <a href="/awards" className="underline">Awards page</a>)</span>
           </p>
         </div>
       </div>

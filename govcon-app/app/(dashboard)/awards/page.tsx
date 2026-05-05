@@ -8,28 +8,16 @@ import {
   Award, DollarSign, Building2, ChevronLeft, ChevronRight,
   ExternalLink, Search, Loader2,
 } from 'lucide-react';
-import { useContracts, updateSearchParam, type ContractListItem } from '@/lib/api/contracts';
+import { useAwards, updateSearchParam, type AwardItem, formatAwardValue, formatAwardDate } from '@/lib/api/awards';
 
 // ============================================================
-// FEDERAL CONTRACT AWARDS PAGE — /awards
-// Shows awarded contracts from USASpending.gov
+// CONTRACT AWARDS PAGE — /awards
+// Shows historical awarded contracts from:
+// - USASpending.gov (federal awards in Pittsburgh MSA)
+// - Allegheny County PAVNextGen (local contract awards)
 // ============================================================
 
 const PAGE_SIZE = 25;
-
-function formatDollars(cents: number | null): string {
-  if (!cents) return '—';
-  const dollars = cents / 100;
-  if (dollars >= 1_000_000_000) return `$${(dollars / 1_000_000_000).toFixed(1)}B`;
-  if (dollars >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`;
-  if (dollars >= 1_000) return `$${(dollars / 1_000).toFixed(0)}K`;
-  return `$${dollars.toFixed(0)}`;
-}
-
-function formatDate(iso: string | null): string {
-  if (!iso) return '—';
-  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
-}
 
 function Pagination({
   page, totalPages, total, limit,
@@ -92,13 +80,10 @@ function Pagination({
   );
 }
 
-function AwardRow({ award }: { award: ContractListItem }) {
-  // Extract recipient from description: "Awarded to: COMPANY NAME. NAICS: ..."
-  const recipientMatch = award.description?.match(/Awarded to:\s*([^.]+)/i);
-  const recipient = recipientMatch?.[1]?.trim() ?? '—';
-
-  const value = award.value_max;
-  const valueStr = formatDollars(value);
+function AwardRow({ award }: { award: AwardItem }) {
+  const recipient = award.awardee_name ?? '—';
+  const value = award.award_amount;
+  const valueStr = formatAwardValue(value);
 
   return (
     <div className="bg-white rounded-xl border border-gray-200 p-4 hover:shadow-md hover:border-blue-200 transition-all">
@@ -129,11 +114,11 @@ function AwardRow({ award }: { award: ContractListItem }) {
             {award.place_of_performance_city && (
               <span>{award.place_of_performance_city}, {award.place_of_performance_state}</span>
             )}
-            {award.posted_date && (
-              <span>Awarded: {formatDate(award.posted_date)}</span>
+            {award.award_date && (
+              <span>Awarded: {formatAwardDate(award.award_date)}</span>
             )}
-            {award.deadline && award.deadline > new Date().toISOString() && (
-              <span>Expires: {formatDate(award.deadline)}</span>
+            {award.contract_end_date && (
+              <span>Expires: {formatAwardDate(award.contract_end_date)}</span>
             )}
           </div>
         </div>
@@ -141,7 +126,7 @@ function AwardRow({ award }: { award: ContractListItem }) {
         <div className="flex flex-col items-end gap-2 flex-shrink-0">
           <div className="text-right">
             <p className="text-lg font-bold text-gray-900">{valueStr}</p>
-            <p className="text-xs text-gray-400">Contract Value</p>
+            <p className="text-xs text-gray-400">Award Amount</p>
           </div>
           {award.url && (
             <a
@@ -150,7 +135,7 @@ function AwardRow({ award }: { award: ContractListItem }) {
               rel="noopener noreferrer"
               className="flex items-center gap-1 text-xs text-blue-600 hover:text-blue-800 transition"
             >
-              USASpending <ExternalLink className="w-3 h-3" />
+              {award.source === 'local_allegheny' ? 'Allegheny County' : 'USASpending'} <ExternalLink className="w-3 h-3" />
             </a>
           )}
         </div>
@@ -167,13 +152,13 @@ function AwardsContent() {
   const page = parseInt(searchParams.get('page') ?? '1', 10);
   const q = searchParams.get('q') ?? '';
   const agency = searchParams.get('agency') ?? '';
-  const sort = searchParams.get('sort') ?? 'value_max:desc';
+  const awardee = searchParams.get('awardee') ?? '';
+  const sort = searchParams.get('sort') ?? 'award_date:desc';
 
-  const { data: response, isLoading, error } = useContracts({
-    source: 'federal_usaspending',
-    status: 'awarded',
+  const { data: response, isLoading, error } = useAwards({
     q,
     agency,
+    awardee,
     sort,
     page: String(page),
     limit: String(PAGE_SIZE),
@@ -201,9 +186,9 @@ function AwardsContent() {
       {/* Header */}
       <div className="flex items-center justify-between">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Federal Contract Awards</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Contract Awards</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Awarded contracts in the Pittsburgh metro area · Source: USASpending.gov
+            Historical awards in Pittsburgh metro area · Federal (USASpending) + Local (Allegheny County)
           </p>
         </div>
         <div className="flex items-center gap-2 bg-green-50 border border-green-200 rounded-xl px-3 py-2">
@@ -247,14 +232,14 @@ function AwardsContent() {
           <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500">Total Value (shown)</p>
             <p className="text-xl font-bold text-gray-900">
-              {formatDollars(awards.reduce((sum, a) => sum + (a.value_max ?? 0), 0))}
+              {formatAwardValue(awards.reduce((sum, a) => sum + (a.award_amount ?? 0), 0))}
             </p>
           </div>
           <div className="bg-white rounded-xl border border-gray-200 px-4 py-3">
             <p className="text-xs text-gray-500">Avg. Award Value</p>
             <p className="text-xl font-bold text-gray-900">
               {awards.length > 0
-                ? formatDollars(Math.round(awards.reduce((sum, a) => sum + (a.value_max ?? 0), 0) / awards.length))
+                ? formatAwardValue(Math.round(awards.reduce((sum, a) => sum + (a.award_amount ?? 0), 0) / awards.length))
                 : '—'}
             </p>
           </div>

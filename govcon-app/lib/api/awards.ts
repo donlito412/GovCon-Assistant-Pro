@@ -1,8 +1,8 @@
 'use client';
 
 // ============================================================
-// CLIENT-SIDE CONTRACTS DATA FETCHING — SWR HOOKS
-// All filter state is URL-param driven (shareable links).
+// CLIENT-SIDE AWARDS DATA FETCHING — SWR HOOKS
+// For historical contract awards (separate from opportunities)
 // ============================================================
 
 import useSWR from 'swr';
@@ -10,7 +10,7 @@ import { useSearchParams } from 'next/navigation';
 
 // ---- Types ----
 
-export interface ContractListItem {
+export interface AwardItem {
   id: number;
   source: string;
   title: string;
@@ -19,45 +19,42 @@ export interface ContractListItem {
   naics_code: number | null;
   naics_sector: string | null;
   contract_type: string | null;
-  threshold_category: string | null;
   set_aside_type: string | null;
-  value_min: number | null;
-  value_max: number | null;
-  deadline: string | null;
-  posted_date: string | null;
+  award_date: string | null;
+  award_amount: number | null;
+  contract_start_date: string | null;
+  contract_end_date: string | null;
+  awardee_name: string | null;
+  awardee_uei: string | null;
   place_of_performance_city: string | null;
   place_of_performance_state: string | null;
   place_of_performance_zip: string | null;
   description: string | null;
   url: string | null;
+  usaspending_award_id: string | null;
   status: string;
-  canonical_sources: string[] | null;
   created_at: string;
   updated_at: string;
 }
 
-export interface ContractsResponse {
-  data: ContractListItem[];
+export interface AwardsResponse {
+  data: AwardItem[];
   total: number;
   page: number;
   limit: number;
   totalPages: number;
 }
 
-export interface ContractFilters {
+export interface AwardFilters {
   q?: string;
   source?: string;
   naics?: string;
-  naics_sector?: string;
   agency?: string;
-  threshold?: string;
-  contract_type?: string;
-  set_aside?: string;
+  awardee?: string;
   min_value?: string;
   max_value?: string;
-  deadline_after?: string;
-  deadline_before?: string;
-  status?: string;
+  awarded_after?: string;
+  awarded_before?: string;
   sort?: string;
   page?: string;
   limit?: string;
@@ -76,44 +73,40 @@ const fetcher = async (url: string) => {
 
 // ---- Build URL from filters ----
 
-export function buildContractsUrl(filters: ContractFilters): string {
+export function buildAwardsUrl(filters: AwardFilters): string {
   const params = new URLSearchParams();
   for (const [key, value] of Object.entries(filters)) {
     if (value !== undefined && value !== '' && value !== null) {
       params.set(key, String(value));
     }
   }
-  return `/api/contracts?${params.toString()}`;
+  return `/api/awards?${params.toString()}`;
 }
 
 // ---- Main hook: reads from URL search params ----
 
-export function useContracts(overrides?: Partial<ContractFilters>) {
+export function useAwards(overrides?: Partial<AwardFilters>) {
   const searchParams = useSearchParams();
 
-  const filters: ContractFilters = {
+  const filters: AwardFilters = {
     q: searchParams.get('q') ?? undefined,
     source: searchParams.get('source') ?? undefined,
     naics: searchParams.get('naics') ?? undefined,
-    naics_sector: searchParams.get('naics_sector') ?? undefined,
     agency: searchParams.get('agency') ?? undefined,
-    threshold: searchParams.get('threshold') ?? undefined,
-    contract_type: searchParams.get('contract_type') ?? undefined,
-    set_aside: searchParams.get('set_aside') ?? undefined,
+    awardee: searchParams.get('awardee') ?? undefined,
     min_value: searchParams.get('min_value') ?? undefined,
     max_value: searchParams.get('max_value') ?? undefined,
-    deadline_after: searchParams.get('deadline_after') ?? undefined,
-    deadline_before: searchParams.get('deadline_before') ?? undefined,
-    status: searchParams.get('status') ?? 'active',  // Default to active opportunities only
-    sort: searchParams.get('sort') ?? 'deadline:asc',
+    awarded_after: searchParams.get('awarded_after') ?? undefined,
+    awarded_before: searchParams.get('awarded_before') ?? undefined,
+    sort: searchParams.get('sort') ?? 'award_date:desc',
     page: searchParams.get('page') ?? '1',
     limit: searchParams.get('limit') ?? '25',
     ...overrides,
   };
 
-  const url = buildContractsUrl(filters);
+  const url = buildAwardsUrl(filters);
 
-  const { data, error, isLoading, mutate } = useSWR<ContractsResponse>(url, fetcher, {
+  const { data, error, isLoading, mutate } = useSWR<AwardsResponse>(url, fetcher, {
     keepPreviousData: true,
     revalidateOnFocus: false,
   });
@@ -121,43 +114,20 @@ export function useContracts(overrides?: Partial<ContractFilters>) {
   return { data, error, isLoading, mutate, filters, url };
 }
 
-// ---- Hook: single contract by ID ----
-
-export function useContract(id: number | string | null) {
-  const url = id != null ? `/api/contracts/${id}` : null;
-  const { data, error, isLoading } = useSWR<ContractListItem>(url, fetcher, {
-    revalidateOnFocus: false,
-  });
-  return { contract: data, error, isLoading };
-}
-
 // ---- Utility: format dollar value from cents ----
 
-export function formatValue(cents: number | null | undefined): string {
+export function formatAwardValue(cents: number | null | undefined): string {
   if (cents == null) return 'N/A';
   const dollars = cents / 100;
+  if (dollars >= 1_000_000_000) return `$${(dollars / 1_000_000_000).toFixed(1)}B`;
   if (dollars >= 1_000_000) return `$${(dollars / 1_000_000).toFixed(1)}M`;
   if (dollars >= 1_000) return `$${(dollars / 1_000).toFixed(0)}K`;
   return `$${dollars.toLocaleString()}`;
 }
 
-// ---- Utility: update URL params without full navigation ----
+// ---- Utility: format date ----
 
-export function updateSearchParam(
-  searchParams: URLSearchParams,
-  updates: Record<string, string | null>,
-): string {
-  const next = new URLSearchParams(searchParams.toString());
-  for (const [key, value] of Object.entries(updates)) {
-    if (value == null || value === '') {
-      next.delete(key);
-    } else {
-      next.set(key, value);
-    }
-  }
-  // Reset page to 1 on any filter change (except explicit page set)
-  if (!('page' in updates)) {
-    next.delete('page');
-  }
-  return next.toString();
+export function formatAwardDate(iso: string | null | undefined): string {
+  if (!iso) return '—';
+  return new Date(iso).toLocaleDateString('en-US', { year: 'numeric', month: 'short', day: 'numeric' });
 }

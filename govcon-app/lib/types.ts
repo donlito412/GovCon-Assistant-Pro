@@ -21,6 +21,7 @@ export type OpportunitySource =
   | 'local_allegheny_publicworks'
   | 'local_pittsburgh'
   | 'local_ura'
+  | 'local_housing_authority'
   | 'local_bidnet'
   // Education
   | 'education_pitt'

@@ -185,38 +185,89 @@ const PITTSBURGH_MSA_CITIES = new Set([
 ]);
 
 /**
- * Returns true if the SAM.gov opportunity is relevant to Pennsylvania-based bidders.
- *
- * Strategy: include ALL PA-state records. Pennsylvania companies can bid on any
- * contract where place-of-performance is PA or unspecified. Filtering down to just
- * Pittsburgh MSA was rejecting thousands of statewide contracts that Pittsburgh
- * companies are fully eligible to bid on. Users can further filter by city/zip in the UI.
- *
- * Exclude only: explicitly non-PA records with a clear out-of-state city/zip.
+ * GovTribe-style filtering: Include ANY opportunity a Pittsburgh business can bid on.
+ * 
+ * INCLUDES:
+ * 1. Pittsburgh MSA opportunities (place of performance in metro area)
+ * 2. PA state opportunities (Pittsburgh businesses can bid statewide)
+ * 3. National opportunities (no location specified - open to all US bidders)
+ * 4. Set-aside contracts Pittsburgh small businesses qualify for
+ * 5. Office location in Pittsburgh (local procurement offices)
+ * 
+ * EXCLUDES:
+ * - Only explicitly out-of-state locations with no PA connection
  */
 export function isPittsburghOpportunity(opp: SamGovOpportunity): boolean {
   const pop = opp.placeOfPerformance;
-
-  // No place-of-performance data at all → include if PA office or unknown location
-  if (!pop || (!pop.zip && !pop.city?.name && !pop.county?.name && !pop.state?.code && !pop.state?.name)) {
-    const officeState = (opp.officeAddress?.state ?? '').toUpperCase();
-    const officeZip = opp.officeAddress?.zipcode ?? '';
-    // Keep if PA office, or if location is truly unspecified (statewide/national)
-    return officeState === 'PA' || officeZip.startsWith('15') || officeState === '';
+  
+  // NO location data at all = National contract (any US business can bid)
+  // GovTribe includes these - they're huge opportunity pools
+  const hasLocationData = pop && (pop.zip || pop.city?.name || pop.county?.name || pop.state?.code || pop.state?.name);
+  if (!hasLocationData) {
+    return true; // National opportunity - include it
   }
-
-  // If state is specified, only exclude records explicitly outside PA
-  const stateCode = (pop.state?.code ?? '').toUpperCase();
-  const stateName = (pop.state?.name ?? '').toUpperCase();
-
-  // No state specified → keep (nationwide contract, PA companies can bid)
-  if (!stateCode && !stateName) return true;
-
-  // Explicitly PA → keep
-  if (stateCode === 'PA' || stateName === 'PENNSYLVANIA' || stateName === 'PA') return true;
-
-  // Explicitly another state → exclude (e.g., California, Texas)
-  return false;
+  
+  // Check if explicitly in Pittsburgh MSA zips
+  const zip = pop?.zip?.slice(0, 5);
+  if (zip && isPittsburghAreaZip(zip)) {
+    return true;
+  }
+  
+  // Check if in Pittsburgh MSA counties
+  const county = pop?.county?.name ?? '';
+  if (county && isPittsburghAreaCounty(county)) {
+    return true;
+  }
+  
+  // Check if place of performance is PA (anywhere in PA - Pittsburgh businesses can bid statewide)
+  const stateCode = (pop?.state?.code ?? '').toUpperCase();
+  const stateName = (pop?.state?.name ?? '').toUpperCase();
+  if (stateCode === 'PA' || stateName === 'PENNSYLVANIA' || stateName === 'PA') {
+    return true; // Any PA contract - Pittsburgh businesses can bid
+  }
+  
+  // Check if office address is in PA (procurement office in PA)
+  const officeState = (opp.officeAddress?.state ?? '').toUpperCase();
+  const officeZip = opp.officeAddress?.zipcode ?? '';
+  if (officeState === 'PA' || isPittsburghAreaZip(officeZip)) {
+    return true;
+  }
+  
+  // Check city names for Pittsburgh metro
+  const city = (pop?.city?.name ?? '').toLowerCase().trim();
+  if (city) {
+    const pittsburghCities = [
+      'pittsburgh', 'allegheny', 'monroeville', 'west mifflin', 'mckeesport',
+      'bethel park', 'canonsburg', 'wexford', 'cranberry', 'cranberry township',
+      'mars', 'moon', 'coraopolis', 'carnegie', 'mt lebanon', 'mount lebanon',
+      'upper st clair', 'peters township', 'brentwood', 'swissvale', 'edgewood',
+      'churchill', 'penn hills', 'plum', 'murrysville', 'export', 'irwin',
+      'north huntingdon', 'greensburg', 'jeannette', 'latrobe', 'connellsville',
+      'uniontown', 'beaver', 'beaver falls', 'aliquippa', 'ambridge', 'economy',
+      'rochester', 'butler', 'slippery rock', 'grove city', 'washington', 'charleroi',
+      'monessen', 'donora', 'california', 'waynesburg', 'kittanning', 'ford city',
+      'apollo', 'leechburg', 'new kensington', 'lower burrell', 'brackenridge',
+      'tarentum', 'natrona heights', 'oakmont', 'verona', 'springdale', 'cheswick',
+      'harmarville', 'etna', 'millvale', 'aspinwall', 'oakdale', 'imperial',
+      'findlay', 'collier', 'robinson', 'kennedy', 'stowe', 'mckees rocks',
+      'crafton', 'rosslyn farms'
+    ];
+    if (pittsburghCities.some(c => city.includes(c))) {
+      return true;
+    }
+  }
+  
+  // Only exclude if explicitly another state with NO PA connection
+  if (stateCode && stateCode !== 'PA') {
+    // Check if office is in PA even if work is elsewhere
+    if (officeState === 'PA') {
+      return true; // Procurement office in PA
+    }
+    return false; // Explicitly another state, no PA office
+  }
+  
+  // Default: include (conservative - better to show extra than miss opportunities)
+  return true;
 }
 
 // ============================================================

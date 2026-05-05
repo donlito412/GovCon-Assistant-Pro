@@ -11,6 +11,28 @@
 import type { ScraperResult, ScrapedOpportunity } from './shared/normalize_shared';
 import { computeDedupHash } from './shared/normalize_shared';
 
+// Awards table type (separate from opportunities)
+interface ScrapedAward {
+  source: 'local_allegheny';
+  title: string;
+  agency_name: string;
+  solicitation_number?: string;
+  dedup_hash: string;
+  canonical_sources: ['local_allegheny'];
+  naics_code?: number;
+  naics_sector?: string;
+  contract_type: 'contract';
+  award_date?: string;
+  contract_start_date?: string;
+  contract_end_date?: string;
+  awardee_name?: string;
+  place_of_performance_city: string;
+  place_of_performance_state: string;
+  description: string;
+  url: string;
+  status: 'awarded';
+}
+
 const SOURCE = 'local_allegheny' as const;
 const PORTAL_URL = 'https://documents.alleghenycounty.us/PAVClient/ContractSearch/index.html';
 const API_URL = 'https://documents.alleghenycounty.us/PAVNextGen/api/CustomQuery/KeywordSearch';
@@ -81,7 +103,7 @@ function parseDate(dateStr: string): string | undefined {
   return iso;
 }
 
-function mapRecord(rec: PAVRecord, today: string): ScrapedOpportunity | null {
+function mapRecord(rec: PAVRecord): ScrapedAward | null {
   const cols = rec.DisplayColumnValues ?? [];
   const dept   = cols[0]?.Value?.trim() ?? '';
   const vendor = cols[1]?.Value?.trim() ?? '';
@@ -97,12 +119,11 @@ function mapRecord(rec: PAVRecord, today: string): ScrapedOpportunity | null {
   const title = parts.join(' — ') || `Allegheny County Contract ${agree}`;
 
   const agency = dept ? `Allegheny County - ${dept}` : 'Allegheny County';
-  const deadline = parseDate(end);
-  const postedDate = parseDate(start);
+  const contractEndDate = parseDate(end);
+  const contractStartDate = parseDate(start);
+  const awardDate = contractStartDate; // Use start date as award date
 
-  const status = !deadline || deadline >= today ? 'active' : 'expired';
-
-  const dedupHash = computeDedupHash(title, agency, deadline ?? null);
+  const dedupHash = computeDedupHash(title, agency, contractEndDate ?? null);
 
   return {
     source: SOURCE,
@@ -114,30 +135,26 @@ function mapRecord(rec: PAVRecord, today: string): ScrapedOpportunity | null {
     naics_code: undefined,
     naics_sector: undefined,
     contract_type: 'contract',
-    threshold_category: 'unknown',
-    set_aside_type: undefined,
-    value_min: undefined,
-    value_max: undefined,
-    deadline,
-    posted_date: postedDate,
+    award_date: awardDate,
+    contract_start_date: contractStartDate,
+    contract_end_date: contractEndDate,
+    awardee_name: vendor || undefined,
     place_of_performance_city: 'Pittsburgh',
     place_of_performance_state: 'PA',
-    place_of_performance_zip: undefined,
     description: `Allegheny County contract. Vendor: ${vendor || 'N/A'}. Department: ${dept || 'N/A'}. Agreement #${agree}. Period: ${start} to ${end}`.slice(0, 1000),
     url: PORTAL_URL,
-    status,
+    status: 'awarded',
   };
 }
 
-export async function scrapeAlleghenyCounty(): Promise<ScraperResult> {
+export async function scrapeAlleghenyCounty(): Promise<ScraperResult & { awards: ScrapedAward[] }> {
   const start = Date.now();
   const errors: string[] = [];
   const seen = new Set<string>();
-  const opportunities: ScrapedOpportunity[] = [];
-
-  const today = new Date().toISOString().slice(0, 10);
+  const awards: ScrapedAward[] = [];
 
   console.log('[allegheny_county] Starting PAVNextGen API fetch...');
+  console.log('[allegheny_county] NOTE: These are HISTORICAL AWARDS — writing to contract_awards table');
 
   for (const [fromDate, toDate] of DATE_RANGES) {
     console.log(`[allegheny_county] Fetching ${fromDate} → ${toDate}...`);
@@ -146,11 +163,11 @@ export async function scrapeAlleghenyCounty(): Promise<ScraperResult> {
       console.log(`[allegheny_county] Got ${records.length} records for ${fromDate}–${toDate}`);
 
       for (const rec of records) {
-        const opp = mapRecord(rec, today);
-        if (!opp) continue;
-        if (seen.has(opp.dedup_hash)) continue;
-        seen.add(opp.dedup_hash);
-        opportunities.push(opp);
+        const award = mapRecord(rec);
+        if (!award) continue;
+        if (seen.has(award.dedup_hash)) continue;
+        seen.add(award.dedup_hash);
+        awards.push(award);
       }
     } catch (err) {
       const msg = `Failed to fetch range ${fromDate}–${toDate}: ${err instanceof Error ? err.message : String(err)}`;
@@ -160,10 +177,10 @@ export async function scrapeAlleghenyCounty(): Promise<ScraperResult> {
   }
 
   const durationMs = Date.now() - start;
-  const active = opportunities.filter((o) => o.status === 'active').length;
   console.log(
-    `[allegheny_county] Done. ${opportunities.length} unique records (${active} active) | ${errors.length} errors | ${durationMs}ms`,
+    `[allegheny_county] Done. ${awards.length} unique awards | ${errors.length} errors | ${durationMs}ms`,
   );
 
-  return { source: SOURCE, opportunities, errors, durationMs };
+  // Return empty opportunities array (for backwards compat) + awards array
+  return { source: SOURCE, opportunities: [], awards, errors, durationMs };
 }

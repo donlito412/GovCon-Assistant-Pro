@@ -17,26 +17,25 @@ const SOURCE_GROUPS = [
   {
     label: 'Federal',
     options: [
-      { value: 'federal_samgov', label: 'SAM.gov' },
-      { value: 'federal_samgov_forecast', label: 'SAM.gov Forecast' },
-      { value: 'federal_usaspending', label: 'USASpending' },
+      { value: 'federal_samgov', label: 'SAM.gov (Pittsburgh MSA)' },
     ],
   },
   {
-    label: 'Pennsylvania State',
+    label: 'State',
     options: [
       { value: 'state_pa_emarketplace', label: 'PA eMarketplace' },
       { value: 'state_pa_treasury', label: 'PA Treasury' },
       { value: 'state_pa_bulletin', label: 'PA Bulletin' },
+      { value: 'state_pa_dced', label: 'PA DCED' },
     ],
   },
   {
     label: 'Local',
     options: [
-      { value: 'local_allegheny', label: 'Allegheny County' },
-      { value: 'local_allegheny_publicworks', label: 'Allegheny Public Works' },
+      { value: 'local_allegheny', label: 'Allegheny County (Active)' },
       { value: 'local_pittsburgh', label: 'City of Pittsburgh' },
-      { value: 'local_ura', label: 'URA' },
+      { value: 'local_ura', label: 'Urban Redevelopment Authority' },
+      { value: 'local_housing_authority', label: 'Housing Authority of Pittsburgh' },
     ],
   },
   {
@@ -45,7 +44,7 @@ const SOURCE_GROUPS = [
       { value: 'education_pitt', label: 'University of Pittsburgh' },
       { value: 'education_cmu', label: 'Carnegie Mellon' },
       { value: 'education_ccac', label: 'CCAC' },
-      { value: 'education_pgh_schools', label: 'PGH Public Schools' },
+      { value: 'education_pgh_schools', label: 'Pittsburgh Public Schools' },
       { value: 'education_duquesne', label: 'Duquesne University' },
     ],
   },
@@ -95,6 +94,13 @@ const SET_ASIDE_OPTIONS = [
   { value: 'wosb', label: 'WOSB' },
   { value: 'edwosb', label: 'EDWOSB' },
   { value: 'unrestricted', label: 'Unrestricted' },
+];
+
+const STATUS_OPTIONS = [
+  { value: 'active', label: 'Active / Open', color: 'green' },
+  { value: 'closed', label: 'Closed / Expired', color: 'gray' },
+  { value: 'awarded', label: 'Awarded', color: 'blue' },
+  { value: 'cancelled', label: 'Cancelled', color: 'red' },
 ];
 
 // ---- Collapsible section ----
@@ -165,6 +171,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
   const selectedTypes = new Set((searchParams.get('contract_type') ?? '').split(',').filter(Boolean));
   const selectedSectors = new Set((searchParams.get('naics_sector') ?? '').split(',').filter(Boolean));
   const selectedSetAsides = new Set((searchParams.get('set_aside') ?? '').split(',').filter(Boolean));
+  const selectedStatuses = new Set((searchParams.get('status') ?? 'active').split(',').filter(Boolean));
   const selectedThreshold = searchParams.get('threshold') ?? '';
   const minValue = searchParams.get('min_value') ?? '';
   const maxValue = searchParams.get('max_value') ?? '';
@@ -190,6 +197,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
     selectedTypes.size > 0 ||
     selectedSectors.size > 0 ||
     selectedSetAsides.size > 0 ||
+    selectedStatuses.size > 0 ||
     selectedThreshold ||
     minValue ||
     maxValue ||
@@ -198,7 +206,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
 
   function clearAll() {
     const qs = updateSearchParam(new URLSearchParams(searchParams.toString()), {
-      source: null, contract_type: null, naics_sector: null, set_aside: null,
+      source: null, contract_type: null, naics_sector: null, set_aside: null, status: null,
       threshold: null, min_value: null, max_value: null,
       deadline_after: null, deadline_before: null, page: null,
     });
@@ -248,6 +256,25 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
                 />
               ))}
             </div>
+          ))}
+        </FilterSection>
+
+        {/* Status — DEFAULT TO ACTIVE ONLY */}
+        <FilterSection title={`Status ${selectedStatuses.has('active') ? '(Active Only)' : ''}`} defaultOpen={!selectedStatuses.has('active')}>
+          <div className="bg-blue-50 border border-blue-100 rounded-lg p-3 mb-3">
+            <p className="text-xs text-blue-700">
+              <strong>Default:</strong> Showing only Active/Open opportunities.
+              <br />
+              Closed & Awarded contracts are on the <a href="/awards" className="underline font-semibold">Awards page</a>.
+            </p>
+          </div>
+          {STATUS_OPTIONS.map((opt) => (
+            <FilterCheckbox
+              key={opt.value}
+              label={opt.label}
+              checked={selectedStatuses.has(opt.value)}
+              onChange={(checked) => toggleSetValue('status', selectedStatuses, opt.value, checked)}
+            />
           ))}
         </FilterSection>
 

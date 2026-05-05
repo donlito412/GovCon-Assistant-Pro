@@ -10,7 +10,7 @@
 
 const SAM_BASE_URL = 'https://api.sam.gov/opportunities/v2/search';
 const PAGE_LIMIT = 100;
-const MAX_RESULTS = 10_000;
+const MAX_RESULTS = 50_000;  // GovTribe-style: capture more opportunities
 const MAX_RETRIES = 5;
 const INITIAL_BACKOFF_MS = 2_000;
 
@@ -146,19 +146,21 @@ async function fetchPage(
   postedFrom: string,
   postedTo: string,
 ): Promise<SamGovSearchResponse> {
-  // Fetch all PA active opportunities. All notice types included (o=solicitation,
-  // k=combined synopsis, r=sources sought, s=special notice, g=grant, a=award notice,
-  // p=presolicitation, u=justification). Post-fetch filter in normalizePittsburghOpportunities
-  // removes explicitly out-of-state records while keeping all PA and unspecified locations.
+  // GovTribe-style: Fetch ALL US opportunities (no state filter)
+  // Post-fetch filter keeps opportunities relevant to Pittsburgh businesses:
+  // 1. Place of performance in Pittsburgh MSA
+  // 2. Office address in Pittsburgh MSA  
+  // 3. No location specified (national contracts where Pittsburgh can bid)
+  // 4. Set-asides that Pittsburgh small businesses qualify for
   const params = new URLSearchParams({
     api_key: apiKey,
     limit: String(PAGE_LIMIT),
     offset: String(offset),
     postedFrom,
     postedTo,
-    ptype: 'o,k,r,s,p,u,a',
-    state: 'PA',
+    ptype: 'o,k,r,s,p,u,a,g',  // Added g=grant
     status: 'active',
+    // NO state filter - get all US opportunities
   });
 
   const url = `${SAM_BASE_URL}?${params.toString()}`;
@@ -224,15 +226,14 @@ function todayDateString(): string {
 }
 
 /**
- * Fetches ALL PA-state SAM.gov opportunities posted in the last 90 days.
+ * Fetches ALL US SAM.gov opportunities (GovTribe-style).
+ * Returns national opportunities relevant to Pittsburgh businesses.
  * Paginates through all pages (up to MAX_RESULTS).
- * Handles rate limiting with exponential backoff.
- * Logs progress to console (visible in Netlify function logs).
- *
+ * 
  * @param apiKey - SAM.gov API key (from SAMGOV_API_KEY env var)
- * @param lookbackDays - Number of days to look back (default 90)
+ * @param lookbackDays - Number of days to look back (default 365)
  */
-export async function fetchAllPAOpportunities(
+export async function fetchAllUSOpportunities(
   apiKey: string,
   lookbackDays = 365,
 ): Promise<FetchAllOpportunitiesResult> {
@@ -243,7 +244,7 @@ export async function fetchAllPAOpportunities(
   const postedFrom = daysAgoDateString(lookbackDays);
   const postedTo = todayDateString();
 
-  console.log(`[samgov] Fetching PA opportunities from ${postedFrom} to ${postedTo}`);
+  console.log(`[samgov] Fetching ALL US opportunities from ${postedFrom} to ${postedTo}`);
 
   const allOpportunities: SamGovOpportunity[] = [];
   const errors: string[] = [];
@@ -310,4 +311,58 @@ export async function fetchAllPAOpportunities(
     totalAvailable,
     errors,
   };
+}
+
+// ============================================================
+// MAIN SCRAPER FUNCTION
+// ============================================================
+
+import { normalizeSamGovOpportunities } from './normalize';
+import type { ScraperResult } from './shared/normalize_shared';
+
+/**
+ * Main SAM.gov scraper - fetches and normalizes opportunities
+ * This is the function called by the ingestion runner
+ */
+export async function scrapeSAMGov(): Promise<ScraperResult> {
+  const start = Date.now();
+  const apiKey = process.env.SAMGOV_API_KEY;
+  
+  if (!apiKey) {
+    return {
+      source: 'federal_samgov' as const,
+      opportunities: [],
+      errors: ['SAMGOV_API_KEY not configured in environment variables'],
+      durationMs: 0,
+    };
+  }
+  
+  try {
+    // Fetch all US opportunities (GovTribe-style, not just PA)
+    const result = await fetchAllUSOpportunities(apiKey, 365);
+    
+    // Normalize to our schema
+    const normalized = normalizeSamGovOpportunities(result.opportunities);
+    
+    const durationMs = Date.now() - start;
+    
+    console.log(`[scrapeSAMGov] Complete: ${normalized.length} opportunities (${result.totalAvailable} available)`);
+    
+    return {
+      source: 'federal_samgov' as const,
+      opportunities: normalized,
+      errors: result.errors,
+      durationMs,
+    };
+  } catch (err) {
+    const msg = err instanceof Error ? err.message : String(err);
+    console.error('[scrapeSAMGov] Fatal error:', msg);
+    
+    return {
+      source: 'federal_samgov' as const,
+      opportunities: [],
+      errors: [msg],
+      durationMs: Date.now() - start,
+    };
+  }
 }
