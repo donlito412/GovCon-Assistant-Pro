@@ -31,11 +31,11 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
     .eq('agency_id', agencyId)
     .eq('record_type', 'award');
 
-  const totalSpend = awards?.reduce((sum, award) => sum + (award.awarded_value || 0), 0) || 0;
+  const totalSpend = awards?.reduce((sum, award: any) => sum + (award.awarded_value || 0), 0) || 0;
 
   // Calculate top vendors
   const vendorTotals: Record<string, { name: string; uei: string; total: number }> = {};
-  awards?.forEach((award) => {
+  awards?.forEach((award: any) => {
     if (award.vendor_uei && award.vendor_name) {
       if (!vendorTotals[award.vendor_uei]) {
          vendorTotals[award.vendor_uei] = { name: award.vendor_name, uei: award.vendor_uei, total: 0 };
@@ -65,7 +65,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
             <h2 className="text-xl font-bold mb-4">Active Opportunities</h2>
             {activeOpps && activeOpps.length > 0 ? (
                <ul className="divide-y divide-gray-200">
-                  {activeOpps.map(opp => (
+                  {activeOpps.map((opp: any) => (
                      <li key={opp.id} className="py-3">
                         <Link href={`/dashboard/contracts/${opp.id}`} className="text-blue-600 hover:underline font-medium">
                            {opp.title}
@@ -84,7 +84,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
             <h2 className="text-xl font-bold mb-4">Top Vendors</h2>
             {topVendors.length > 0 ? (
                <ul className="divide-y divide-gray-200">
-                  {topVendors.map(vendor => (
+                  {topVendors.map((vendor: any) => (
                      <li key={vendor.uei} className="py-3 flex justify-between">
                         <Link href={`/dashboard/vendors/${vendor.uei}`} className="text-blue-600 hover:underline font-medium truncate pr-4">
                            {vendor.name}
@@ -101,3 +101,4 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
     </div>
   );
 }
+

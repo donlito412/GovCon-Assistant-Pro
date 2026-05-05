@@ -77,7 +77,7 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
                         </tr>
                     </thead>
                     <tbody className="bg-white divide-y divide-gray-200 text-sm">
-                        {awards.map(award => (
+                        {awards.map((award: any) => (
                             <tr key={award.id}>
                                 <td className="px-4 py-2 whitespace-nowrap text-gray-500">
                                     {award.awarded_date ? new Date(award.awarded_date).toLocaleDateString() : 'N/A'}

@@ -15,7 +15,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
-import { fetchAllUSOpportunities } from '@/lib/ingestion/samgov';
+import { fetchPAOpportunities } from '@/lib/ingestion/samgov';
 import { normalizePittsburghOpportunities, type NormalizedOpportunity } from '@/lib/ingestion/normalize';
 
 const UPSERT_BATCH_SIZE = 50;
@@ -180,7 +180,7 @@ export async function POST(req: NextRequest): Promise<NextResponse> {
   console.log('[ingest/federal] Starting SAM.gov federal ingestion...');
 
   // ---- FETCH FROM SAM.GOV ----
-  const fetchResult = await fetchAllUSOpportunities(apiKey);
+  const fetchResult = await fetchPAOpportunities(apiKey);
 
   console.log(
     `[ingest/federal] SAM.gov fetch complete. Fetched: ${fetchResult.totalFetched} / Available: ${fetchResult.totalAvailable}`,
