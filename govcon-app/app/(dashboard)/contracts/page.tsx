@@ -101,6 +101,8 @@ function ContractsPageInner() {
   const [viewMode, setViewMode] = useState<'card' | 'table'>('card');
   const searchParams = useSearchParams();
   const page = parseInt(searchParams.get('page') ?? '1', 10);
+  const statusParam = searchParams.get('status') ?? 'active';
+  const isClosed = statusParam.includes('closed') || statusParam.includes('awarded') || statusParam.includes('cancelled');
 
   const { data, isLoading, error } = useContracts({ limit: String(PAGE_SIZE) });
 
@@ -116,8 +118,8 @@ function ContractsPageInner() {
         <div>
           <h1 className="text-2xl font-bold text-gray-900">Contracts</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            Active Pittsburgh-area opportunities — bid before the deadline
-            <span className="text-blue-600 font-medium ml-2">(Closed contracts → <a href="/awards" className="underline">Awards page</a>)</span>
+            {isClosed ? 'Closed/Expired Pittsburgh-area opportunities' : 'Active Pittsburgh-area opportunities — bid before the deadline'}
+            {!isClosed && <span className="text-blue-600 font-medium ml-2">(Closed contracts → <a href="/awards" className="underline">Awards page</a>)</span>}
           </p>
         </div>
       </div>

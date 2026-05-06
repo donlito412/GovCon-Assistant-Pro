@@ -5,29 +5,55 @@ export default async function ContractDetailPage({ params }: { params: { id: str
   const supabase = createServerSupabaseClient();
   const recordId = parseInt(params.id, 10);
 
-  // Fetch the record (can be opportunity or award)
+  // Fetch the record from opportunities
   const { data: record } = await supabase
-    .from('records')
+    .from('opportunities')
     .select('*, agency:agencies(id, name)')
     .eq('id', recordId)
     .single();
 
   if (!record) return <div className="p-8">Record not found</div>;
 
+  // Add dummy record_type since this is an opportunity
+  const oppRecord = { ...record, record_type: 'opportunity' };
+
   // If this is an opportunity that is active, check if it's a recompete
-  // by looking for past awards with a similar title/NAICS/agency.
-  // This is a simplified proxy for "recompete radar" until we have contract lineage IDs.
   let pastAwards: any[] = [];
-  if (record.record_type === 'opportunity' && record.agency_id) {
+  if (oppRecord.agency_name) {
      const { data } = await supabase
-        .from('records')
-        .select('id, vendor_name, vendor_uei, awarded_date, awarded_value, contract_number')
-        .eq('record_type', 'award')
-        .eq('agency_id', record.agency_id)
-        .eq('naics_code', record.naics_code)
-        .order('awarded_date', { ascending: false })
+        .from('contract_awards')
+        .select('id, vendor_name, vendor_uei, date_signed, total_value, contract_number')
+        .eq('agency_name', oppRecord.agency_name)
+        .eq('naics_code', oppRecord.naics_code)
+        .order('date_signed', { ascending: false })
         .limit(5);
-     pastAwards = data || [];
+     
+     // Map contract_awards columns to match what the UI expects
+     pastAwards = (data || []).map(a => ({
+         ...a,
+         awarded_date: a.date_signed,
+         awarded_value: a.total_value,
+     }));
+  }
+
+  // Fetch POC from SAM.gov dynamically
+  let pocs: any[] = [];
+  if (oppRecord.source === 'federal_samgov' && oppRecord.solicitation_number) {
+    const apiKey = process.env.SAMGOV_API_KEY;
+    if (apiKey) {
+      try {
+        const url = `https://api.sam.gov/opportunities/v2/search?api_key=${apiKey}&solnum=${oppRecord.solicitation_number}&limit=1`;
+        const res = await fetch(url, { headers: { Accept: 'application/json' }, next: { revalidate: 3600 } });
+        if (res.ok) {
+          const data = await res.json();
+          if (data?.opportunitiesData?.[0]?.pointOfContact) {
+            pocs = data.opportunitiesData[0].pointOfContact;
+          }
+        }
+      } catch (e) {
+        console.error("Failed to fetch SAM.gov POC", e);
+      }
+    }
   }
 
   return (
@@ -36,31 +62,26 @@ export default async function ContractDetailPage({ params }: { params: { id: str
       <div className="bg-white p-6 rounded shadow border border-gray-200">
         <div className="flex justify-between items-start">
             <div>
-                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 ${
-                    record.record_type === 'award' ? 'bg-green-100 text-green-800' : 'bg-blue-100 text-blue-800'
-                }`}>
-                    {record.record_type}
+                <span className={`inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium capitalize mb-2 bg-blue-100 text-blue-800`}>
+                    Opportunity
                 </span>
-                <h1 className="text-2xl font-bold text-gray-900">{record.title}</h1>
+                <h1 className="text-2xl font-bold text-gray-900">{oppRecord.title}</h1>
                 <p className="text-gray-500 mt-1 flex items-center gap-2">
-                    {record.agency_id ? (
-                       <Link href={`/dashboard/agencies/${record.agency_id}`} className="text-blue-600 hover:underline">
-                           {(record as any).agency?.name || 'Unknown Agency'}
+                    {oppRecord.agency_id ? (
+                       <Link href={`/dashboard/agencies/${oppRecord.agency_id}`} className="text-blue-600 hover:underline">
+                           {(oppRecord as any).agency?.name || 'Unknown Agency'}
                        </Link>
                     ) : (
-                       <span>{record.agency_name || 'Unknown Agency'}</span>
+                       <span>{oppRecord.agency_name || 'Unknown Agency'}</span>
                     )}
                     <span>•</span>
-                    <span className="uppercase">{record.source}</span>
+                    <span className="uppercase">{oppRecord.source}</span>
                 </p>
             </div>
             <div className="text-right">
-                {record.record_type === 'award' && record.awarded_value ? (
-                    <div className="text-2xl font-bold text-green-600">${(record.awarded_value / 100).toLocaleString()}</div>
-                ) : null}
-                {record.record_type === 'opportunity' && record.value_max ? (
+                {oppRecord.value_max ? (
                     <div className="text-sm font-medium text-gray-600">
-                        Up to ${(record.value_max / 100).toLocaleString()}
+                        Up to ${(oppRecord.value_max / 100).toLocaleString()}
                     </div>
                 ) : null}
             </div>
@@ -75,50 +96,40 @@ export default async function ContractDetailPage({ params }: { params: { id: str
                   <dl className="space-y-2 text-sm">
                       <div>
                           <dt className="text-gray-500">Status</dt>
-                          <dd className="font-medium capitalize">{record.status}</dd>
+                          <dd className="font-medium capitalize">{oppRecord.status}</dd>
                       </div>
-                      {record.deadline && (
+                      {oppRecord.deadline && (
                           <div>
                               <dt className="text-gray-500">Deadline</dt>
-                              <dd className="font-medium text-red-600">{new Date(record.deadline).toLocaleString()}</dd>
+                              <dd className="font-medium text-red-600">{new Date(oppRecord.deadline).toLocaleString()}</dd>
                           </div>
                       )}
-                      {record.awarded_date && (
-                          <div>
-                              <dt className="text-gray-500">Awarded On</dt>
-                              <dd className="font-medium">{new Date(record.awarded_date).toLocaleDateString()}</dd>
-                          </div>
-                      )}
-                      {record.solicitation_number && (
+                      {oppRecord.solicitation_number && (
                           <div>
                               <dt className="text-gray-500">Solicitation #</dt>
-                              <dd className="font-medium font-mono">{record.solicitation_number}</dd>
+                              <dd className="font-medium font-mono">{oppRecord.solicitation_number}</dd>
                           </div>
                       )}
-                      {record.contract_number && (
-                          <div>
-                              <dt className="text-gray-500">Contract #</dt>
-                              <dd className="font-medium font-mono">{record.contract_number}</dd>
-                          </div>
-                      )}
-                      {record.naics_code && (
+                      {oppRecord.naics_code && (
                           <div>
                               <dt className="text-gray-500">NAICS</dt>
-                              <dd className="font-medium">{record.naics_code}</dd>
+                              <dd className="font-medium">{oppRecord.naics_code}</dd>
                           </div>
                       )}
                   </dl>
               </div>
 
-              {/* Vendor Info (if award) */}
-              {record.record_type === 'award' && record.vendor_uei && (
-                  <div className="bg-white p-4 rounded shadow border border-gray-200 border-l-4 border-l-green-500">
-                      <h3 className="font-semibold mb-3 border-b pb-2">Awarded To</h3>
-                      <div className="text-sm">
-                          <Link href={`/dashboard/vendors/${record.vendor_uei}`} className="font-bold text-blue-600 hover:underline block mb-1">
-                              {record.vendor_name || 'Unknown Vendor'}
-                          </Link>
-                          <span className="text-gray-500 font-mono text-xs">UEI: {record.vendor_uei}</span>
+              {pocs.length > 0 && (
+                  <div className="bg-white p-4 rounded shadow border border-gray-200">
+                      <h3 className="font-semibold mb-3 border-b pb-2">Points of Contact</h3>
+                      <div className="space-y-4">
+                          {pocs.map((poc, i) => (
+                              <div key={i} className="text-sm">
+                                  <div className="font-medium">{poc.fullName || poc.title || 'Contact'} <span className="text-gray-500 text-xs ml-1 capitalize">({poc.type || 'Primary'})</span></div>
+                                  {poc.email && <div className="text-gray-600"><a href={`mailto:${poc.email}`} className="text-blue-600 hover:underline">{poc.email}</a></div>}
+                                  {poc.phone && <div className="text-gray-600">{poc.phone}</div>}
+                              </div>
+                          ))}
                       </div>
                   </div>
               )}
@@ -129,11 +140,11 @@ export default async function ContractDetailPage({ params }: { params: { id: str
               <div className="bg-white p-6 rounded shadow border border-gray-200">
                   <h2 className="text-lg font-bold mb-4">Description</h2>
                   <div className="prose max-w-none text-sm text-gray-700 whitespace-pre-wrap">
-                      {record.description || 'No description provided.'}
+                      {oppRecord.description || 'No description provided.'}
                   </div>
-                  {record.url && (
+                  {oppRecord.url && (
                       <div className="mt-6 pt-4 border-t">
-                          <a href={record.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium inline-flex items-center">
+                          <a href={oppRecord.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium inline-flex items-center">
                               View Original Source 
                               <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                           </a>
@@ -142,13 +153,13 @@ export default async function ContractDetailPage({ params }: { params: { id: str
               </div>
 
               {/* Incumbent / Past Awards Logic */}
-              {record.record_type === 'opportunity' && pastAwards.length > 0 && (
+              {pastAwards.length > 0 && (
                   <div className="bg-white p-6 rounded shadow border border-gray-200">
                       <h2 className="text-lg font-bold mb-2 flex items-center gap-2">
                           <svg className="w-5 h-5 text-orange-500" fill="none" stroke="currentColor" viewBox="0 0 24 24"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M12 8v4l3 3m6-3a9 9 0 11-18 0 9 9 0 0118 0z"></path></svg>
                           Potential Recompetes / Past Work
                       </h2>
-                      <p className="text-sm text-gray-500 mb-4">Past awards from this agency in the same NAICS code ({record.naics_code}).</p>
+                      <p className="text-sm text-gray-500 mb-4">Past awards from this agency in the same NAICS code ({oppRecord.naics_code}).</p>
                       
                       <div className="space-y-3">
                           {pastAwards.map(award => (

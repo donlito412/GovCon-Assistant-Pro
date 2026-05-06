@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useTransition } from 'react';
+import React from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { updateSearchParam } from '@/lib/api/contracts';
@@ -164,7 +164,6 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
   const router = useRouter();
   const pathname = usePathname();
   const searchParams = useSearchParams();
-  const [, startTransition] = useTransition();
 
   // Parse current filter values from URL
   const selectedSources = new Set((searchParams.get('source') ?? '').split(',').filter(Boolean));
@@ -180,9 +179,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
 
   function applyUpdate(updates: Record<string, string | null>) {
     const qs = updateSearchParam(new URLSearchParams(searchParams.toString()), updates);
-    startTransition(() => {
-      router.push(`${pathname}?${qs}`);
-    });
+    router.push(`${pathname}?${qs}`, { scroll: false });
   }
 
   function toggleSetValue(param: string, current: Set<string>, value: string, checked: boolean) {
@@ -210,7 +207,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
       threshold: null, min_value: null, max_value: null,
       deadline_after: null, deadline_before: null, page: null,
     });
-    startTransition(() => router.push(`${pathname}?${qs}`));
+    router.push(`${pathname}?${qs}`, { scroll: false });
   }
 
   return (
@@ -222,7 +219,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
           <span className="text-sm font-bold text-gray-900">Filters</span>
           {hasAnyFilter && (
             <span className="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
-              {[selectedSources.size, selectedTypes.size, selectedSectors.size, selectedSetAsides.size,
+              {[selectedSources.size, selectedTypes.size, selectedSectors.size, selectedSetAsides.size, selectedStatuses.size,
                 selectedThreshold ? 1 : 0, minValue || maxValue ? 1 : 0,
                 deadlineAfter || deadlineBefore ? 1 : 0].reduce((a, b) => a + b, 0)}
             </span>

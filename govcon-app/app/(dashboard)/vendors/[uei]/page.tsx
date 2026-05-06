@@ -6,12 +6,18 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
   const uei = params.uei;
 
   // Fetch all awards for this vendor
-  const { data: awards } = await supabase
-    .from('records')
+  const { data: rawAwards } = await supabase
+    .from('contract_awards')
     .select('*, agency:agencies(id, name)')
     .eq('vendor_uei', uei)
-    .eq('record_type', 'award')
-    .order('awarded_date', { ascending: false });
+    .order('date_signed', { ascending: false });
+
+  // Map to the expected UI fields
+  const awards = (rawAwards || []).map(a => ({
+      ...a,
+      awarded_date: a.date_signed,
+      awarded_value: a.total_value,
+  }));
 
   if (!awards || awards.length === 0) {
       return <div className="p-8">Vendor not found or has no award history in our system.</div>;
@@ -22,15 +28,15 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
   const totalWon = awards.reduce((sum: number, a: any) => sum + (a.awarded_value || 0), 0);
 
   // Aggregate by agency
-  const agencyTotals: Record<string, { id: number; name: string; total: number }> = {};
+  const agencyTotals: Record<string, { id: string; name: string; total: number }> = {};
   awards.forEach((award: any) => {
-      const agencyId = award.agency_id;
-      const agencyName = (award as any).agency?.name || 'Unknown Agency';
-      if (agencyId) {
-          if (!agencyTotals[agencyId]) {
-              agencyTotals[agencyId] = { id: agencyId, name: agencyName, total: 0 };
+      const agencyName = award.agency_name || 'Unknown Agency';
+      const agencyKey = agencyName.toLowerCase();
+      if (agencyName !== 'Unknown Agency') {
+          if (!agencyTotals[agencyKey]) {
+              agencyTotals[agencyKey] = { id: agencyKey, name: agencyName, total: 0 };
           }
-          agencyTotals[agencyId].total += (award.awarded_value || 0);
+          agencyTotals[agencyKey].total += (award.awarded_value || 0);
       }
   });
 

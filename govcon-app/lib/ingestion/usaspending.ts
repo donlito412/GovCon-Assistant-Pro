@@ -69,7 +69,7 @@ export async function fetchPAAwards(): Promise<USASpendingAward[]> {
       'naics_code',
       'piid'
     ],
-    limit: 1000, // Fetch up to 1000 recent awards
+    limit: 100, // Fetch up to 100 recent awards (API max is 100)
     page: 1,
     sort: 'Award Date',
     order: 'desc'
@@ -85,6 +85,8 @@ export async function fetchPAAwards(): Promise<USASpendingAward[]> {
     });
 
     if (!response.ok) {
+      const text = await response.text();
+      console.error(`USASpending 422 Body:`, text);
       throw new Error(`USASpending API error: HTTP ${response.status}`);
     }
 

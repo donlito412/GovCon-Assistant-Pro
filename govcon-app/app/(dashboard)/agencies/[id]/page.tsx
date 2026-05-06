@@ -16,22 +16,20 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
 
   // 2. Fetch Active Opportunities
   const { data: activeOpps } = await supabase
-    .from('records')
+    .from('opportunities')
     .select('id, title, solicitation_number, deadline, value_max')
-    .eq('agency_id', agencyId)
-    .eq('record_type', 'opportunity')
+    .eq('agency_name', agency.name)
     .eq('status', 'active')
     .order('deadline', { ascending: true })
     .limit(10);
 
-  // 3. Fetch Past Awards (from unified table) to calculate total spend and top vendors
+  // 3. Fetch Past Awards
   const { data: awards } = await supabase
-    .from('records')
-    .select('vendor_name, vendor_uei, awarded_value')
-    .eq('agency_id', agencyId)
-    .eq('record_type', 'award');
+    .from('contract_awards')
+    .select('vendor_name, vendor_uei, total_value')
+    .eq('agency_name', agency.name);
 
-  const totalSpend = awards?.reduce((sum: number, award: any) => sum + (award.awarded_value || 0), 0) || 0;
+  const totalSpend = awards?.reduce((sum: number, award: any) => sum + (award.total_value || 0), 0) || 0;
 
   // Calculate top vendors
   const vendorTotals: Record<string, { name: string; uei: string; total: number }> = {};
@@ -40,7 +38,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
       if (!vendorTotals[award.vendor_uei]) {
          vendorTotals[award.vendor_uei] = { name: award.vendor_name, uei: award.vendor_uei, total: 0 };
       }
-      vendorTotals[award.vendor_uei].total += (award.awarded_value || 0);
+      vendorTotals[award.vendor_uei].total += (award.total_value || 0);
     }
   });
 
