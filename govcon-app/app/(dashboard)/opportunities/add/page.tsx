@@ -2,7 +2,7 @@
 
 import { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import { createBrowserSupabaseClient } from '@/lib/supabase/client';
+import { createBrowserSupabaseClient } from '@/lib/supabase';
 
 export default function AddOpportunityPage() {
     const router = useRouter();
