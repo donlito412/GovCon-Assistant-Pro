@@ -57,9 +57,6 @@ async function run() {
     console.log(`Updated ${updated} rows in ${tableName}.`);
   }
 
-  await fixTable('opportunities');
-  await fixTable('contract_awards');
-
   console.log("Triggering USASpending cron...");
   try {
     const res = await fetch('https://gov-con-assistant-pro.vercel.app/api/cron/usaspending', {
@@ -72,6 +69,9 @@ async function run() {
   } catch (err) {
     console.error("USASpending cron error:", err);
   }
+
+  await fixTable('opportunities');
+  await fixTable('contract_awards');
 }
 
 run();

@@ -89,7 +89,9 @@ interface ScrapedAward {
   award_date?: string;
   contract_start_date?: string;
   contract_end_date?: string;
-  awardee_name?: string;
+  vendor_name?: string;
+  vendor_uei?: string;
+  total_value?: number;
   place_of_performance_city: string;
   place_of_performance_state: string;
   description: string;
@@ -128,7 +130,9 @@ export async function upsertAwards(
     award_date: award.award_date,
     contract_start_date: award.contract_start_date,
     contract_end_date: award.contract_end_date,
-    awardee_name: award.awardee_name,
+    vendor_name: award.vendor_name,
+    vendor_uei: award.vendor_uei,
+    total_value: award.total_value,
     place_of_performance_city: award.place_of_performance_city,
     place_of_performance_state: award.place_of_performance_state,
     description: award.description,

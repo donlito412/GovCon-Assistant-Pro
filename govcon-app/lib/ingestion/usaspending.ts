@@ -64,14 +64,14 @@ export async function fetchPAAwards(): Promise<USASpendingAward[]> {
       'Recipient UEI',
       'Awarding Agency',
       'Award Amount',
-      'Award Date',
+      'Start Date',
       'Description',
       'naics_code',
       'piid'
     ],
     limit: 100, // Fetch up to 100 recent awards (API max is 100)
     page: 1,
-    sort: 'Award Date',
+    sort: 'Start Date',
     order: 'desc'
   };
 
