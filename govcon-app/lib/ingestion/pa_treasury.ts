@@ -44,7 +44,7 @@ export async function scrapePaTreasury(): Promise<ScraperResult> {
       const link = titleCell.find('a').attr('href');
       if (!title || /^contract|title$/i.test(title)) return;
       const url = link ? new URL(link, URL_BASE).toString() : SEARCH_URL;
-      const deadlineIso = parseToIso(dateText) ?? null;
+      const deadlineIso = parseToIso(dateText) ?? undefined;
       opportunities.push({
         source: SOURCE,
         title,
@@ -55,7 +55,7 @@ export async function scrapePaTreasury(): Promise<ScraperResult> {
         contract_type: mapContractType('Other'),
         threshold_category: 'unknown',
         deadline: deadlineIso,
-        posted_date: null,
+        posted_date: undefined,
         place_of_performance_city: '',
         place_of_performance_state: 'PA',
         place_of_performance_zip: '',

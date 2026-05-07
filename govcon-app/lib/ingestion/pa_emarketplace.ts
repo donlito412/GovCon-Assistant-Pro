@@ -53,7 +53,7 @@ export async function scrapeEMarketplace(): Promise<ScraperResult> {
         const detailUrl = link
           ? new URL(link, url).toString()
           : url;
-        const deadlineIso = parseToIso(closeText) ?? null;
+        const deadlineIso = parseToIso(closeText) ?? undefined;
 
         opportunities.push({
           source: SOURCE,
@@ -65,7 +65,7 @@ export async function scrapeEMarketplace(): Promise<ScraperResult> {
           contract_type: mapContractType('RFP'),
           threshold_category: 'unknown',
           deadline: deadlineIso,
-          posted_date: null,
+          posted_date: undefined,
           place_of_performance_city: '',
           place_of_performance_state: 'PA',
           place_of_performance_zip: '',

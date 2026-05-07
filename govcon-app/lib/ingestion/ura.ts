@@ -53,7 +53,7 @@ export async function scrapeURA(): Promise<ScraperResult> {
         // Look for nearby date text
         let dateText = $el.next().text().trim().slice(0, 100);
         if (!dateText) dateText = $el.parent().text().slice(0, 200);
-        const deadlineIso = parseToIso(dateText) ?? null;
+        const deadlineIso = parseToIso(dateText) ?? undefined;
 
         opportunities.push({
           source: SOURCE,
@@ -65,7 +65,7 @@ export async function scrapeURA(): Promise<ScraperResult> {
           contract_type: mapContractType(title),
           threshold_category: 'unknown',
           deadline: deadlineIso,
-          posted_date: null,
+          posted_date: undefined,
           place_of_performance_city: 'Pittsburgh',
           place_of_performance_state: 'PA',
           place_of_performance_zip: '15219',

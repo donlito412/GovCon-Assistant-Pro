@@ -56,7 +56,7 @@ async function scrapeCityHtml(url: string): Promise<{ opportunities: ScrapedOppo
 
       // Try to find a date near the anchor (parent or sibling)
       const ctx = $a.parent().text() || '';
-      const deadlineIso = parseToIso(ctx) ?? null;
+      const deadlineIso = parseToIso(ctx) ?? undefined;
 
       opportunities.push({
         source: SOURCE,
@@ -68,7 +68,7 @@ async function scrapeCityHtml(url: string): Promise<{ opportunities: ScrapedOppo
         contract_type: mapContractType(text),
         threshold_category: 'unknown',
         deadline: deadlineIso,
-        posted_date: null,
+        posted_date: undefined,
         place_of_performance_city: 'Pittsburgh',
         place_of_performance_state: 'PA',
         place_of_performance_zip: '15219',
@@ -120,8 +120,8 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
         const title = (o.title || o.name || o.projectName || '').toString().trim();
         if (!title) continue;
         const url = o.url || `${PORTAL}#${o.id ?? ''}`;
-        const deadline = parseToIso(o.closeDate || o.dueDate || o.endDate) ?? null;
-        const posted = parseToIso(o.openDate || o.startDate || o.publishDate) ?? null;
+        const deadline = parseToIso(o.closeDate || o.dueDate || o.endDate) ?? undefined;
+        const posted = parseToIso(o.openDate || o.startDate || o.publishDate) ?? undefined;
         opportunities.push({
           source: SOURCE,
           title,
@@ -165,7 +165,7 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
             for (const o of list) {
               const title = (o.title || o.name || '').toString().trim();
               if (!title) continue;
-              const deadline = parseToIso(o.closeDate || o.dueDate) ?? null;
+              const deadline = parseToIso(o.closeDate || o.dueDate) ?? undefined;
               opportunities.push({
                 source: SOURCE,
                 title,
@@ -176,7 +176,7 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
                 contract_type: mapContractType(o.type || 'RFP'),
                 threshold_category: 'unknown',
                 deadline,
-                posted_date: parseToIso(o.openDate || o.publishDate) ?? null,
+                posted_date: parseToIso(o.openDate || o.publishDate) ?? undefined,
                 place_of_performance_city: 'Pittsburgh',
                 place_of_performance_state: 'PA',
                 place_of_performance_zip: '15219',
