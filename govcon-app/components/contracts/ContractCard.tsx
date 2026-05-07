@@ -17,11 +17,32 @@ interface ContractCardProps {
   onAddToPipeline?: (contract: ContractListItem) => void;
 }
 
+// Strip raw SAM.gov API URLs that the ingest stored in `description` instead
+// of the actual description text. Show nothing rather than a useless URL.
+function cleanDescription(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const trimmed = raw.replace(/\s+/g, ' ').trim();
+  if (!trimmed) return null;
+  if (/^https?:\/\//i.test(trimmed)) return null;
+  return trimmed.slice(0, 180) + (trimmed.length > 180 ? '…' : '');
+}
+
+// SAM.gov returns agency as a dot-separated hierarchy:
+//   "DEPT OF DEFENSE.DEFENSE LOGISTICS AGENCY.DLA AVIATION.DLA AVIATION PHILADELPHIA"
+// Show the most specific (last) segment. Fall back to first segment if it's
+// the same dept twice.
+function cleanAgencyName(raw: string | null | undefined): string | null {
+  if (!raw) return null;
+  const segments = raw.split('.').map(s => s.trim()).filter(Boolean);
+  if (segments.length === 0) return raw;
+  if (segments.length === 1) return segments[0];
+  // Show the deepest sub-org but prefix with top-level for context
+  return `${segments[segments.length - 1]} (${segments[0]})`;
+}
+
 export function ContractCard({ contract, onAddToPipeline }: ContractCardProps) {
-  const descriptionExcerpt = contract.description
-    ? contract.description.replace(/\s+/g, ' ').trim().slice(0, 180) +
-      (contract.description.length > 180 ? '…' : '')
-    : null;
+  const descriptionExcerpt = cleanDescription(contract.description);
+  const agencyDisplay = cleanAgencyName(contract.agency_name);
 
   const location = [contract.place_of_performance_city, contract.place_of_performance_state]
     .filter(Boolean)
@@ -75,10 +96,10 @@ export function ContractCard({ contract, onAddToPipeline }: ContractCardProps) {
 
       {/* Meta row */}
       <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-xs text-gray-500">
-        {contract.agency_name && (
-          <span className="flex items-center gap-1">
+        {agencyDisplay && (
+          <span className="flex items-center gap-1" title={contract.agency_name ?? ''}>
             <Building2 className="w-3.5 h-3.5 flex-shrink-0" />
-            <span className="truncate max-w-[200px]">{contract.agency_name}</span>
+            <span className="truncate max-w-[260px]">{agencyDisplay}</span>
           </span>
         )}
         {location && (

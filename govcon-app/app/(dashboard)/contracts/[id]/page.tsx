@@ -5,13 +5,20 @@ export default async function ContractDetailPage({ params }: { params: { id: str
   const supabase = createServerSupabaseClient();
   const recordId = parseInt(params.id, 10);
 
-  // Fetch the record from opportunities
-  const { data: record } = await supabase
+  // Fetch the record from opportunities.
+  // NOTE: do NOT join agencies — opportunities has no agency_id column;
+  // a join here causes the entire query to error out and the detail page
+  // to render "Record not found" for every record. We fall back to the
+  // agency_name text field below.
+  const { data: record, error: recordError } = await supabase
     .from('opportunities')
-    .select('*, agency:agencies(id, name)')
+    .select('*')
     .eq('id', recordId)
-    .single();
+    .maybeSingle();
 
+  if (recordError) {
+    console.error('[contracts/[id]] supabase error:', recordError);
+  }
   if (!record) return <div className="p-8">Record not found</div>;
 
   // Add dummy record_type since this is an opportunity
@@ -67,13 +74,7 @@ export default async function ContractDetailPage({ params }: { params: { id: str
                 </span>
                 <h1 className="text-2xl font-bold text-gray-900">{oppRecord.title}</h1>
                 <p className="text-gray-500 mt-1 flex items-center gap-2">
-                    {oppRecord.agency_id ? (
-                       <Link href={`/dashboard/agencies/${oppRecord.agency_id}`} className="text-blue-600 hover:underline">
-                           {(oppRecord as any).agency?.name || 'Unknown Agency'}
-                       </Link>
-                    ) : (
-                       <span>{oppRecord.agency_name || 'Unknown Agency'}</span>
-                    )}
+                    <span>{oppRecord.agency_name || 'Unknown Agency'}</span>
                     <span>•</span>
                     <span className="uppercase">{oppRecord.source}</span>
                 </p>
@@ -140,7 +141,9 @@ export default async function ContractDetailPage({ params }: { params: { id: str
               <div className="bg-white p-6 rounded shadow border border-gray-200">
                   <h2 className="text-lg font-bold mb-4">Description</h2>
                   <div className="prose max-w-none text-sm text-gray-700 whitespace-pre-wrap">
-                      {oppRecord.description || 'No description provided.'}
+                      {oppRecord.description && !/^https?:\/\//i.test(oppRecord.description.trim())
+                        ? oppRecord.description
+                        : <span className="text-gray-400 italic">No description in our DB. Use "View Original Source" below to read the full solicitation on SAM.gov.</span>}
                   </div>
                   {oppRecord.url && (
                       <div className="mt-6 pt-4 border-t">

@@ -134,6 +134,15 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     const effectiveStatuses = statuses.length > 0 ? statuses : ['active'];
     query = query.in('status', effectiveStatuses);
 
+    // When the user wants ACTIVE only (the default), also exclude records
+    // whose deadline has already passed — the SAM.gov ingest doesn't update
+    // status='closed' immediately when a deadline elapses, so we filter
+    // in the query.
+    const onlyActive = effectiveStatuses.length === 1 && effectiveStatuses[0] === 'active';
+    if (onlyActive && !deadlineAfter) {
+      query = query.or(`deadline.gte.${new Date().toISOString()},deadline.is.null`);
+    }
+
     // Sort — nulls last for deadline/value
     query = query.order(safeSortField, { ascending, nullsFirst: false });
 
