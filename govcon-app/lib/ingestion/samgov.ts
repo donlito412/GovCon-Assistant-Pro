@@ -8,7 +8,11 @@
 
 const SAM_BASE_URL = 'https://api.sam.gov/opportunities/v2/search';
 const PAGE_LIMIT = 100;
-const MAX_RESULTS = 500;  // Task 027 constraint: Single ingest run = ≤500 records
+// Pull ALL active PA opportunities. The original 500 cap was protecting
+// against function timeout when the ingest fetched the whole US — with
+// PA-scoped queries the universe is ~3,500 records max, well within
+// budget. Each page is ~100, so 50 pages * ~250ms = ~12s in the happy path.
+const MAX_RESULTS = 5000;
 const MAX_RETRIES = 5;
 const INITIAL_BACKOFF_MS = 2_000;
 
@@ -180,14 +184,18 @@ function todayDateString(): string {
 
 /**
  * Fetches SAM.gov opportunities for PA.
- * Paginates up to MAX_RESULTS (500).
- * 
+ * Paginates up to MAX_RESULTS (5000) — i.e. all of them.
+ *
  * @param apiKey - SAM.gov API key
- * @param lookbackDays - Number of days to look back (default 30)
+ * @param lookbackDays - Number of days to look back (default 90)
+ *
+ * 30-day window misses solicitations posted more than a month ago that
+ * are still open for bidding (federal RFPs commonly run 60–90 days).
+ * 90 captures all reasonably-active solicitations.
  */
 export async function fetchPAOpportunities(
   apiKey: string,
-  lookbackDays = 30, // Task 027 constraint: Lookback 30 days
+  lookbackDays = 90,
 ): Promise<FetchAllOpportunitiesResult> {
   if (!apiKey) {
     throw new Error('SAM.gov API key is required. Set SAMGOV_API_KEY in environment.');
