@@ -1,6 +1,96 @@
 import { createServerSupabaseClient } from '@/lib/supabase';
 import Link from 'next/link';
 
+// Fetch the actual solicitation text from a SAM.gov noticedesc URL.
+// SAM.gov stores the description as plain text behind that URL; we
+// inline-fetch it server-side so the user sees real content, not the URL.
+async function fetchSamgovDescription(descUrl: string): Promise<string | null> {
+  try {
+    const apiKey = process.env.SAMGOV_API_KEY;
+    const url = apiKey && !descUrl.includes('api_key=')
+      ? `${descUrl}${descUrl.includes('?') ? '&' : '?'}api_key=${apiKey}`
+      : descUrl;
+    const res = await fetch(url, {
+      headers: { Accept: 'application/json,text/plain,*/*' },
+      next: { revalidate: 3600 },
+    });
+    if (!res.ok) return null;
+    const text = await res.text();
+    // SAM.gov returns either JSON ({"description":"..."}) or plain text.
+    try {
+      const json = JSON.parse(text);
+      if (typeof json === 'string') return json;
+      if (typeof json?.description === 'string') return json.description;
+    } catch {
+      // not JSON — assume plain text/HTML
+    }
+    // Strip HTML tags if it's HTML
+    return text
+      .replace(/<style[\s\S]*?<\/style>/gi, '')
+      .replace(/<script[\s\S]*?<\/script>/gi, '')
+      .replace(/<[^>]+>/g, '')
+      .replace(/&nbsp;/g, ' ')
+      .replace(/&amp;/g, '&')
+      .replace(/&lt;/g, '<')
+      .replace(/&gt;/g, '>')
+      .replace(/&#39;/g, "'")
+      .replace(/&quot;/g, '"')
+      .replace(/\s+/g, ' ')
+      .trim();
+  } catch (e) {
+    console.error('[contracts/[id]] fetchSamgovDescription failed:', e);
+    return null;
+  }
+}
+
+// Generate an AI summary using Claude Haiku — cheap + fast.
+async function generateAiSummary(opp: {
+  title: string;
+  agency: string;
+  description: string;
+  deadline?: string | null;
+  naics?: number | null;
+}): Promise<string | null> {
+  const apiKey = process.env.ANTHROPIC_API_KEY;
+  if (!apiKey || !opp.description || opp.description.length < 80) return null;
+  try {
+    const prompt =
+      `You are summarizing a US federal solicitation for a small-business contractor in Pittsburgh.\n\n` +
+      `Title: ${opp.title}\n` +
+      `Agency: ${opp.agency}\n` +
+      (opp.naics ? `NAICS: ${opp.naics}\n` : '') +
+      (opp.deadline ? `Deadline: ${opp.deadline}\n` : '') +
+      `\nSolicitation text:\n${opp.description.slice(0, 12_000)}\n\n` +
+      `Write a 4-6 sentence plain-English summary covering: what's being procured, ` +
+      `who can bid (small biz / set-asides if mentioned), key requirements, and ` +
+      `the deadline. No fluff, no marketing language.`;
+    const res = await fetch('https://api.anthropic.com/v1/messages', {
+      method: 'POST',
+      headers: {
+        'x-api-key': apiKey,
+        'anthropic-version': '2023-06-01',
+        'content-type': 'application/json',
+      },
+      body: JSON.stringify({
+        model: 'claude-haiku-4-5-20251001',
+        max_tokens: 400,
+        messages: [{ role: 'user', content: prompt }],
+      }),
+      next: { revalidate: 86400 }, // cache 1 day
+    });
+    if (!res.ok) {
+      console.error('[contracts/[id]] anthropic error:', res.status, await res.text());
+      return null;
+    }
+    const json = await res.json();
+    const text = json?.content?.[0]?.text;
+    return typeof text === 'string' ? text.trim() : null;
+  } catch (e) {
+    console.error('[contracts/[id]] generateAiSummary failed:', e);
+    return null;
+  }
+}
+
 export default async function ContractDetailPage({ params }: { params: { id: string } }) {
   const supabase = createServerSupabaseClient();
   const recordId = parseInt(params.id, 10);
@@ -42,6 +132,29 @@ export default async function ContractDetailPage({ params }: { params: { id: str
          awarded_value: a.total_value,
      }));
   }
+
+  // Resolve the description: if the stored value is a SAM.gov noticedesc
+  // URL (which is what the ingest persists), fetch the actual text now.
+  // Otherwise just use whatever was stored.
+  let resolvedDescription: string | null = null;
+  if (typeof oppRecord.description === 'string' && oppRecord.description.trim()) {
+    if (/^https?:\/\/api\.sam\.gov\/.+noticedesc/i.test(oppRecord.description.trim())) {
+      resolvedDescription = await fetchSamgovDescription(oppRecord.description.trim());
+    } else if (!/^https?:\/\//i.test(oppRecord.description.trim())) {
+      resolvedDescription = oppRecord.description;
+    }
+  }
+
+  // Generate AI summary from the resolved description
+  const aiSummary = resolvedDescription
+    ? await generateAiSummary({
+        title: oppRecord.title,
+        agency: oppRecord.agency_name ?? '',
+        description: resolvedDescription,
+        deadline: oppRecord.deadline,
+        naics: oppRecord.naics_code,
+      })
+    : null;
 
   // Fetch POC from SAM.gov dynamically
   let pocs: any[] = [];
@@ -138,17 +251,28 @@ export default async function ContractDetailPage({ params }: { params: { id: str
 
           {/* Main Content */}
           <div className="space-y-6 md:col-span-2">
+              {/* AI summary — generated from the fetched description */}
+              {aiSummary && (
+                  <div className="bg-blue-50 border-l-4 border-blue-400 p-6 rounded shadow-sm">
+                      <h2 className="text-lg font-bold mb-2 flex items-center gap-2 text-blue-900">
+                          <span className="inline-flex items-center px-2 py-0.5 rounded text-xs font-semibold bg-blue-600 text-white">AI</span>
+                          Summary
+                      </h2>
+                      <p className="text-sm text-gray-800 leading-relaxed whitespace-pre-wrap">{aiSummary}</p>
+                  </div>
+              )}
+
               <div className="bg-white p-6 rounded shadow border border-gray-200">
                   <h2 className="text-lg font-bold mb-4">Description</h2>
                   <div className="prose max-w-none text-sm text-gray-700 whitespace-pre-wrap">
-                      {oppRecord.description && !/^https?:\/\//i.test(oppRecord.description.trim())
-                        ? oppRecord.description
-                        : <span className="text-gray-400 italic">No description in our DB. Use "View Original Source" below to read the full solicitation on SAM.gov.</span>}
+                      {resolvedDescription
+                        ? resolvedDescription
+                        : <span className="text-gray-400 italic">No description available. Use "View Original Source" below to read the full solicitation.</span>}
                   </div>
                   {oppRecord.url && (
                       <div className="mt-6 pt-4 border-t">
                           <a href={oppRecord.url} target="_blank" rel="noopener noreferrer" className="text-blue-600 hover:underline font-medium inline-flex items-center">
-                              View Original Source 
+                              View Original Source
                               <svg className="w-4 h-4 ml-1" fill="none" stroke="currentColor" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth="2" d="M10 6H6a2 2 0 00-2 2v10a2 2 0 002 2h10a2 2 0 002-2v-4M14 4h6m0 0v6m0-6L10 14"></path></svg>
                           </a>
                       </div>
