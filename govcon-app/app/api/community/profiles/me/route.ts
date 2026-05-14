@@ -11,7 +11,7 @@ import { getRouteUser } from '@/lib/auth/route';
 
 export async function GET(_req: NextRequest): Promise<NextResponse> {
   const user = await getRouteUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (!user) return NextResponse.json({ error: 'No profile found' }, { status: 404 });
 
   const supabase = createServerSupabaseClient();
 

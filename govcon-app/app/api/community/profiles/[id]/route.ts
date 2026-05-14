@@ -8,12 +8,13 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getRouteUser } from '@/lib/auth/route';
+import { isAuthEnabled } from '@/lib/auth/mode';
 
 type Ctx = { params: { id: string } };
 
 export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextResponse> {
   const user = await getRouteUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (isAuthEnabled() && !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServerSupabaseClient();
 
@@ -27,8 +28,12 @@ export async function GET(_req: NextRequest, { params }: Ctx): Promise<NextRespo
   if (!data) return NextResponse.json({ error: 'Not found' }, { status: 404 });
 
   // Mask contact info unless viewer is the owner or profiles are connected
-  const isOwner = data.user_id === user.id;
+  const isOwner = user ? data.user_id === user.id : false;
   if (!isOwner) {
+    if (!user) {
+      return NextResponse.json({ ...data, email: null, phone: null });
+    }
+
     const { data: conn } = await supabase
       .from('connection_requests')
       .select('id')

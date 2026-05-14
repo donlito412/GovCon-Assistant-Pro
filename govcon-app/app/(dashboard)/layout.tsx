@@ -3,6 +3,7 @@ import Link from 'next/link';
 import { Bell, Menu, Globe } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
 import { requireAuth } from '@/lib/auth/session';
+import { isAuthEnabled } from '@/lib/auth/mode';
 
 // ============================================================
 // DASHBOARD LAYOUT
@@ -10,7 +11,9 @@ import { requireAuth } from '@/lib/auth/session';
 // ============================================================
 
 export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
-  await requireAuth();
+  if (isAuthEnabled()) {
+    await requireAuth();
+  }
 
   return (
     <div className="min-h-screen flex bg-gray-50">

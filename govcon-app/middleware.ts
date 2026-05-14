@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from 'next/server';
 import { createMiddlewareClient } from '@supabase/auth-helpers-nextjs';
+import { isAuthEnabled } from '@/lib/auth/mode';
 
 const PROTECTED_PAGE_PREFIXES = [
   '/',
@@ -51,6 +52,10 @@ function matchesPrefix(pathname: string, prefixes: string[]): boolean {
 }
 
 export async function middleware(req: NextRequest) {
+  if (!isAuthEnabled()) {
+    return NextResponse.next();
+  }
+
   const { pathname, search } = req.nextUrl;
 
   const isLogin = pathname === '/login';

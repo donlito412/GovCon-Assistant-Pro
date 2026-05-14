@@ -134,6 +134,7 @@ export function ForecastCard({ forecast, onWatch, onAddToPipeline }: Props) {
           </Link>
         )}
         <button onClick={() => onAddToPipeline?.(forecast)}
+          disabled={!forecast.linked_opportunity_id}
           className="flex items-center gap-1.5 text-xs font-semibold text-white bg-indigo-600 hover:bg-indigo-700 px-2.5 py-1.5 rounded-lg transition">
           <PlusCircle className="w-3.5 h-3.5" />Add to Pipeline
         </button>

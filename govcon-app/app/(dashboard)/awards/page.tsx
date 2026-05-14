@@ -215,11 +215,11 @@ function AwardsContent() {
           onChange={(e) => handleSortChange(e.target.value)}
           className="px-3 py-2.5 rounded-xl border border-gray-300 bg-white text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
         >
-          <option value="value_max:desc">Highest Value</option>
-          <option value="value_max:asc">Lowest Value</option>
-          <option value="posted_date:desc">Most Recent</option>
-          <option value="posted_date:asc">Oldest First</option>
-          <option value="deadline:desc">Latest Expiry</option>
+          <option value="award_amount:desc">Highest Value</option>
+          <option value="award_amount:asc">Lowest Value</option>
+          <option value="award_date:desc">Most Recent</option>
+          <option value="award_date:asc">Oldest First</option>
+          <option value="contract_end_date:desc">Latest Expiry</option>
         </select>
       </div>
 

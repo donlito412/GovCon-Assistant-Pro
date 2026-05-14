@@ -16,23 +16,32 @@ import { NextRequest, NextResponse } from 'next/server';
 import { createRouteHandlerClient } from '@supabase/auth-helpers-nextjs';
 import { cookies } from 'next/headers';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { isAuthEnabled, LOCAL_MODE_USER_ID } from '@/lib/auth/mode';
 
 const VALID_FREQUENCIES = ['immediate', 'daily'] as const;
 
 export async function GET(): Promise<NextResponse> {
   try {
-    // Auth: get current user from session cookie
-    const authClient = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authErr } = await authClient.auth.getUser();
-    if (authErr || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    let userId = LOCAL_MODE_USER_ID;
+    let fallbackDisplayName = 'Local User';
+    let fallbackEmail = '';
+
+    if (isAuthEnabled()) {
+      const authClient = createRouteHandlerClient({ cookies });
+      const { data: { user }, error: authErr } = await authClient.auth.getUser();
+      if (authErr || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = user.id;
+      fallbackDisplayName = user.email?.split('@')[0] ?? 'User';
+      fallbackEmail = user.email ?? '';
     }
 
     const supabase = createServerSupabaseClient();
     const { data, error } = await supabase
       .from('user_settings')
       .select('id, user_id, display_name, alert_email, alert_frequency, updated_at')
-      .eq('user_id', user.id)
+      .eq('user_id', userId)
       .maybeSingle();
 
     if (error) {
@@ -42,11 +51,12 @@ export async function GET(): Promise<NextResponse> {
 
     // Return settings (or defaults if no row yet)
     return NextResponse.json(data ?? {
-      user_id: user.id,
-      display_name: user.email?.split('@')[0] ?? '',
-      alert_email: user.email ?? '',
+      user_id: userId,
+      display_name: fallbackDisplayName,
+      alert_email: fallbackEmail,
       alert_frequency: 'daily',
       has_sam_api_key: false,
+      auth_enabled: isAuthEnabled(),
     }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
@@ -55,10 +65,15 @@ export async function GET(): Promise<NextResponse> {
 
 export async function PATCH(req: NextRequest): Promise<NextResponse> {
   try {
-    const authClient = createRouteHandlerClient({ cookies });
-    const { data: { user }, error: authErr } = await authClient.auth.getUser();
-    if (authErr || !user) {
-      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    let userId = LOCAL_MODE_USER_ID;
+
+    if (isAuthEnabled()) {
+      const authClient = createRouteHandlerClient({ cookies });
+      const { data: { user }, error: authErr } = await authClient.auth.getUser();
+      if (authErr || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+      userId = user.id;
     }
 
     const body = await req.json() as {
@@ -69,7 +84,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
     };
 
     const updates: Record<string, unknown> = {
-      user_id: user.id,
+      user_id: userId,
       updated_at: new Date().toISOString(),
     };
 
@@ -97,7 +112,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
 
     if (body.sam_api_key !== undefined && body.sam_api_key.trim()) {
       const { error: vaultErr } = await supabase.rpc('vault_store_sam_api_key', {
-        p_user_id: user.id,
+        p_user_id: userId,
         p_api_key: body.sam_api_key.trim(),
       });
       if (vaultErr) {
@@ -122,7 +137,7 @@ export async function PATCH(req: NextRequest): Promise<NextResponse> {
       return NextResponse.json({ error: error.message }, { status: 500 });
     }
 
-    return NextResponse.json(data, { status: 200 });
+    return NextResponse.json({ ...data, auth_enabled: isAuthEnabled() }, { status: 200 });
   } catch (err) {
     return NextResponse.json({ error: String(err) }, { status: 500 });
   }

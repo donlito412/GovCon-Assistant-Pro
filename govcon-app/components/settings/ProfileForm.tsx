@@ -13,10 +13,11 @@ import { User, Mail, KeyRound, Loader2, CheckCircle2, AlertCircle } from 'lucide
 interface ProfileFormProps {
   displayName: string;
   email: string;
+  authEnabled?: boolean;
   onSaved?: () => void;
 }
 
-export function ProfileForm({ displayName, email, onSaved }: ProfileFormProps) {
+export function ProfileForm({ displayName, email, authEnabled = true, onSaved }: ProfileFormProps) {
   const supabase = createClientComponentClient();
 
   const [name, setName] = useState(displayName);
@@ -125,52 +126,57 @@ export function ProfileForm({ displayName, email, onSaved }: ProfileFormProps) {
           readOnly
           className="w-full text-sm border border-gray-200 rounded-lg px-3 py-2 bg-gray-50 text-gray-500 cursor-not-allowed"
         />
-        <p className="text-xs text-gray-400">Email is managed by Supabase Auth and cannot be changed here.</p>
+        <p className="text-xs text-gray-400">
+          {authEnabled
+            ? 'Email is managed by Supabase Auth and cannot be changed here.'
+            : 'Authentication is currently disabled for this personal deployment.'}
+        </p>
       </div>
 
-      {/* Password change */}
-      <form onSubmit={handleChangePassword} className="space-y-3">
-        <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
-          <KeyRound className="w-4 h-4 text-gray-400" />
-          Change Password
-        </h3>
-        <input
-          type="password"
-          value={newPassword}
-          onChange={(e) => setNewPassword(e.target.value)}
-          placeholder="New password (min 8 characters)"
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={pwLoading}
-          autoComplete="new-password"
-        />
-        <input
-          type="password"
-          value={confirmPassword}
-          onChange={(e) => setConfirmPassword(e.target.value)}
-          placeholder="Confirm new password"
-          className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
-          disabled={pwLoading}
-          autoComplete="new-password"
-        />
-        {pwError && (
-          <p className="text-xs text-red-500 flex items-center gap-1">
-            <AlertCircle className="w-3.5 h-3.5" /> {pwError}
-          </p>
-        )}
-        {pwSuccess && (
-          <p className="text-xs text-green-600 flex items-center gap-1">
-            <CheckCircle2 className="w-3.5 h-3.5" /> Password updated successfully
-          </p>
-        )}
-        <button
-          type="submit"
-          disabled={pwLoading || !newPassword || !confirmPassword}
-          className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
-        >
-          {pwLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
-          {pwLoading ? 'Updating…' : 'Update Password'}
-        </button>
-      </form>
+      {authEnabled && (
+        <form onSubmit={handleChangePassword} className="space-y-3">
+          <h3 className="text-sm font-semibold text-gray-700 flex items-center gap-2">
+            <KeyRound className="w-4 h-4 text-gray-400" />
+            Change Password
+          </h3>
+          <input
+            type="password"
+            value={newPassword}
+            onChange={(e) => setNewPassword(e.target.value)}
+            placeholder="New password (min 8 characters)"
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={pwLoading}
+            autoComplete="new-password"
+          />
+          <input
+            type="password"
+            value={confirmPassword}
+            onChange={(e) => setConfirmPassword(e.target.value)}
+            placeholder="Confirm new password"
+            className="w-full text-sm border border-gray-300 rounded-lg px-3 py-2 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            disabled={pwLoading}
+            autoComplete="new-password"
+          />
+          {pwError && (
+            <p className="text-xs text-red-500 flex items-center gap-1">
+              <AlertCircle className="w-3.5 h-3.5" /> {pwError}
+            </p>
+          )}
+          {pwSuccess && (
+            <p className="text-xs text-green-600 flex items-center gap-1">
+              <CheckCircle2 className="w-3.5 h-3.5" /> Password updated successfully
+            </p>
+          )}
+          <button
+            type="submit"
+            disabled={pwLoading || !newPassword || !confirmPassword}
+            className="flex items-center gap-2 bg-gray-800 hover:bg-gray-900 disabled:opacity-50 text-white text-sm font-medium px-4 py-2 rounded-lg transition"
+          >
+            {pwLoading ? <Loader2 className="w-4 h-4 animate-spin" /> : null}
+            {pwLoading ? 'Updating…' : 'Update Password'}
+          </button>
+        </form>
+      )}
     </div>
   );
 }

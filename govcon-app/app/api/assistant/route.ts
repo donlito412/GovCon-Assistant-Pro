@@ -8,6 +8,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { getRouteUser } from '@/lib/auth/route';
+import { isAuthEnabled } from '@/lib/auth/mode';
 import { streamChatResponse, saveConversation, type ChatMessage } from '@/lib/ai/assistant';
 import type { AssistantContext } from '@/lib/ai/prompts';
 
@@ -15,9 +16,9 @@ export const maxDuration = 120;
 
 export async function POST(req: NextRequest): Promise<NextResponse | Response> {
   const user = await getRouteUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (isAuthEnabled() && !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const userId = user.id;
+  const userId = user?.id ?? 'local';
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -50,9 +51,9 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
 // GET — list conversations
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await getRouteUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (isAuthEnabled() && !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
-  const userId = user.id;
+  const userId = user?.id ?? 'local';
 
   const { listConversations, loadConversation } = await import('../../../lib/ai/assistant');
   const { searchParams } = new URL(req.url);

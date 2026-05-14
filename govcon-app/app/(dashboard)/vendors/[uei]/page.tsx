@@ -8,15 +8,15 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
   // Fetch all awards for this vendor
   const { data: rawAwards } = await supabase
     .from('contract_awards')
-    .select('*, agency:agencies(id, name)')
-    .eq('vendor_uei', uei)
-    .order('date_signed', { ascending: false });
+    .select('*')
+    .eq('awardee_uei', uei)
+    .order('award_date', { ascending: false });
 
   // Map to the expected UI fields
   const awards = (rawAwards || []).map(a => ({
       ...a,
-      awarded_date: a.date_signed,
-      awarded_value: a.total_value,
+      awarded_date: a.award_date,
+      awarded_value: a.award_amount,
   }));
 
   if (!awards || awards.length === 0) {
@@ -24,20 +24,26 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
   }
 
   // Assuming vendor name is consistent across their awards
-  const vendorName = awards[0].vendor_name;
+  const vendorName = awards[0].awardee_name;
   const totalWon = awards.reduce((sum: number, a: any) => sum + (a.awarded_value || 0), 0);
 
+  const agencyNames = Array.from(new Set(awards.map((award: any) => award.agency_name).filter(Boolean)));
+  const { data: agencies } = agencyNames.length > 0
+    ? await supabase.from('agencies').select('id, name').in('name', agencyNames)
+    : { data: [] as Array<{ id: number; name: string }> };
+  const agencyIdByName = new Map((agencies ?? []).map((agency) => [agency.name, agency.id]));
+
   // Aggregate by agency
-  const agencyTotals: Record<string, { id: string; name: string; total: number }> = {};
+  const agencyTotals: Record<string, { id: number | null; name: string; total: number }> = {};
   awards.forEach((award: any) => {
-      const agencyName = award.agency_name || 'Unknown Agency';
-      const agencyKey = agencyName.toLowerCase();
-      if (agencyName !== 'Unknown Agency') {
-          if (!agencyTotals[agencyKey]) {
-              agencyTotals[agencyKey] = { id: agencyKey, name: agencyName, total: 0 };
-          }
-          agencyTotals[agencyKey].total += (award.awarded_value || 0);
+    const agencyName = award.agency_name || 'Unknown Agency';
+    const agencyKey = agencyName.toLowerCase();
+    if (agencyName !== 'Unknown Agency') {
+      if (!agencyTotals[agencyKey]) {
+        agencyTotals[agencyKey] = { id: agencyIdByName.get(agencyName) ?? null, name: agencyName, total: 0 };
       }
+      agencyTotals[agencyKey].total += (award.awarded_value || 0);
+    }
   });
 
   const topAgencies = Object.values(agencyTotals).sort((a, b) => b.total - a.total);
@@ -60,9 +66,13 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
             <ul className="divide-y divide-gray-200">
                 {topAgencies.map(ag => (
                     <li key={ag.id} className="py-2 flex justify-between text-sm">
-                        <Link href={`/dashboard/agencies/${ag.id}`} className="text-blue-600 hover:underline truncate pr-2">
-                           {ag.name}
-                        </Link>
+                        {ag.id ? (
+                          <Link href={`/agencies/${ag.id}`} className="text-blue-600 hover:underline truncate pr-2">
+                             {ag.name}
+                          </Link>
+                        ) : (
+                          <span className="truncate pr-2 text-gray-700">{ag.name}</span>
+                        )}
                         <span className="text-gray-700 font-medium">${(ag.total / 100).toLocaleString()}</span>
                     </li>
                 ))}
@@ -89,12 +99,16 @@ export default async function VendorProfilePage({ params }: { params: { uei: str
                                     {award.awarded_date ? new Date(award.awarded_date).toLocaleDateString() : 'N/A'}
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap font-medium text-blue-600">
-                                    <Link href={`/dashboard/contracts/${award.id}`}>
-                                        {award.contract_number || award.title || 'Unknown Contract'}
-                                    </Link>
+                                    {award.url ? (
+                                      <a href={award.url} target="_blank" rel="noopener noreferrer" className="hover:underline">
+                                        {award.solicitation_number || award.title || 'Unknown Contract'}
+                                      </a>
+                                    ) : (
+                                      <span>{award.solicitation_number || award.title || 'Unknown Contract'}</span>
+                                    )}
                                 </td>
                                 <td className="px-4 py-2 text-gray-700">
-                                    {(award as any).agency?.name || 'Unknown Agency'}
+                                    {award.agency_name || 'Unknown Agency'}
                                 </td>
                                 <td className="px-4 py-2 whitespace-nowrap text-right font-medium text-green-600">
                                     ${((award.awarded_value || 0) / 100).toLocaleString()}

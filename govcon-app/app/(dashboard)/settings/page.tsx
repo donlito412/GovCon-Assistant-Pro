@@ -34,6 +34,7 @@ interface UserSettings {
   alert_frequency: 'immediate' | 'daily';
   has_sam_api_key: boolean;
   sam_api_key_hint?: string;
+  auth_enabled?: boolean;
 }
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -95,14 +96,22 @@ export default function SettingsPage() {
             <p className="text-sm text-gray-500 mt-0.5">Signed in as <strong>{userEmail}</strong></p>
           )}
         </div>
-        <button
-          onClick={handleSignOut}
-          className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg border border-gray-200 transition"
-        >
-          <LogOut className="w-4 h-4" />
-          Sign Out
-        </button>
+        {settings?.auth_enabled !== false && (
+          <button
+            onClick={handleSignOut}
+            className="flex items-center gap-2 text-sm text-gray-500 hover:text-red-600 hover:bg-red-50 px-3 py-2 rounded-lg border border-gray-200 transition"
+          >
+            <LogOut className="w-4 h-4" />
+            Sign Out
+          </button>
+        )}
       </div>
+
+      {settings?.auth_enabled === false && (
+        <div className="rounded-xl border border-blue-200 bg-blue-50 px-4 py-3 text-sm text-blue-800">
+          Local mode is active. The app is usable without logging in, and account-only controls are hidden.
+        </div>
+      )}
 
       {/* Tab bar */}
       <div className="flex items-center gap-1 border-b border-gray-200 overflow-x-auto">
@@ -146,6 +155,7 @@ export default function SettingsPage() {
               <ProfileForm
                 displayName={settings.display_name}
                 email={userEmail}
+                authEnabled={settings.auth_enabled !== false}
                 onSaved={() => {}}
               />
             </SectionCard>

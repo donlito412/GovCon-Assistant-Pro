@@ -63,14 +63,17 @@ export default function RecompetesPage() {
   const totalPages  = data?.total_pages ?? 0;
 
   const handleAddToPipeline = async (contract: IncumbentContract) => {
-    const title = contract.opportunities?.title ?? `${contract.agency_name} — Recompete`;
+    if (!contract.opportunity_id) {
+      window.alert('This recompete record is not linked to a live opportunity yet, so it cannot be added to the contract pipeline.');
+      return;
+    }
+
     await fetch('/api/pipeline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        stage: 'tracking',
-        notes: `Recompete radar: incumbent is ${contract.current_awardee_name}. Contract expires ${contract.period_of_performance_end_date}.`,
-        opportunity_id: contract.opportunity_id ?? null,
+        opportunity_id: contract.opportunity_id,
+        stage: 'Identified',
       }),
     });
   };

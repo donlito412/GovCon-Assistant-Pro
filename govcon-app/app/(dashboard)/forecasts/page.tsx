@@ -77,13 +77,17 @@ export default function ForecastsPage() {
   const totalPages = data?.total_pages ?? 0;
 
   const handleAddToPipeline = async (forecast: ForecastOpportunity) => {
+    if (!forecast.linked_opportunity_id) {
+      window.alert('This forecast does not have a live linked solicitation yet, so it cannot be added to the contract pipeline.');
+      return;
+    }
+
     await fetch('/api/pipeline', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        stage: 'tracking',
-        notes: `Forecast opportunity from SAM.gov. RFP expected: ${forecast.estimated_solicitation_date ?? 'TBD'}. POC: ${forecast.poc_name ?? 'None'} ${forecast.poc_email ?? ''}.`,
-        forecast_opportunity_id: forecast.id,
+        opportunity_id: forecast.linked_opportunity_id,
+        stage: 'Identified',
       }),
     });
   };

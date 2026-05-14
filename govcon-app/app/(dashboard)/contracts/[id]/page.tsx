@@ -119,17 +119,20 @@ export default async function ContractDetailPage({ params }: { params: { id: str
   if (oppRecord.agency_name) {
      const { data } = await supabase
         .from('contract_awards')
-        .select('id, vendor_name, vendor_uei, date_signed, total_value, contract_number')
+        .select('id, awardee_name, awardee_uei, award_date, award_amount, solicitation_number')
         .eq('agency_name', oppRecord.agency_name)
         .eq('naics_code', oppRecord.naics_code)
-        .order('date_signed', { ascending: false })
+        .order('award_date', { ascending: false })
         .limit(5);
      
      // Map contract_awards columns to match what the UI expects
      pastAwards = (data || []).map(a => ({
          ...a,
-         awarded_date: a.date_signed,
-         awarded_value: a.total_value,
+         vendor_name: a.awardee_name,
+         vendor_uei: a.awardee_uei,
+         contract_number: a.solicitation_number,
+         awarded_date: a.award_date,
+         awarded_value: a.award_amount,
      }));
   }
 

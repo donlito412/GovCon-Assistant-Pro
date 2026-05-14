@@ -26,19 +26,19 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
   // 3. Fetch Past Awards
   const { data: awards } = await supabase
     .from('contract_awards')
-    .select('vendor_name, vendor_uei, total_value')
+    .select('awardee_name, awardee_uei, award_amount')
     .eq('agency_name', agency.name);
 
-  const totalSpend = awards?.reduce((sum: number, award: any) => sum + (award.total_value || 0), 0) || 0;
+  const totalSpend = awards?.reduce((sum: number, award: any) => sum + (award.award_amount || 0), 0) || 0;
 
   // Calculate top vendors
   const vendorTotals: Record<string, { name: string; uei: string; total: number }> = {};
   awards?.forEach((award: any) => {
-    if (award.vendor_uei && award.vendor_name) {
-      if (!vendorTotals[award.vendor_uei]) {
-         vendorTotals[award.vendor_uei] = { name: award.vendor_name, uei: award.vendor_uei, total: 0 };
+    if (award.awardee_uei && award.awardee_name) {
+      if (!vendorTotals[award.awardee_uei]) {
+         vendorTotals[award.awardee_uei] = { name: award.awardee_name, uei: award.awardee_uei, total: 0 };
       }
-      vendorTotals[award.vendor_uei].total += (award.total_value || 0);
+      vendorTotals[award.awardee_uei].total += (award.award_amount || 0);
     }
   });
 
@@ -65,7 +65,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
                <ul className="divide-y divide-gray-200">
                   {activeOpps.map((opp: any) => (
                      <li key={opp.id} className="py-3">
-                        <Link href={`/dashboard/contracts/${opp.id}`} className="text-blue-600 hover:underline font-medium">
+                        <Link href={`/contracts/${opp.id}`} className="text-blue-600 hover:underline font-medium">
                            {opp.title}
                         </Link>
                         <p className="text-sm text-gray-500 mt-1">Deadline: {opp.deadline ? new Date(opp.deadline).toLocaleDateString() : 'N/A'}</p>
@@ -84,7 +84,7 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
                <ul className="divide-y divide-gray-200">
                   {topVendors.map((vendor: any) => (
                      <li key={vendor.uei} className="py-3 flex justify-between">
-                        <Link href={`/dashboard/vendors/${vendor.uei}`} className="text-blue-600 hover:underline font-medium truncate pr-4">
+                        <Link href={`/vendors/${vendor.uei}`} className="text-blue-600 hover:underline font-medium truncate pr-4">
                            {vendor.name}
                         </Link>
                         <span className="text-sm font-semibold text-gray-700">${(vendor.total / 100).toLocaleString()}</span>
@@ -99,4 +99,3 @@ export default async function AgencyProfilePage({ params }: { params: { id: stri
     </div>
   );
 }
-

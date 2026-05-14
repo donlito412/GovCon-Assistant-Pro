@@ -8,10 +8,11 @@ export const dynamic = 'force-dynamic';
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
 import { getRouteUser } from '@/lib/auth/route';
+import { isAuthEnabled } from '@/lib/auth/mode';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const user = await getRouteUser();
-  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+  if (isAuthEnabled() && !user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
 
   const supabase = createServerSupabaseClient();
 
