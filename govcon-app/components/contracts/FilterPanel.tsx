@@ -4,6 +4,7 @@ import React from 'react';
 import { useRouter, useSearchParams, usePathname } from 'next/navigation';
 import { X, ChevronDown, ChevronUp, Filter } from 'lucide-react';
 import { updateSearchParam } from '@/lib/api/contracts';
+import { PITTSBURGH_SOURCE_GROUPS } from '@/lib/contracts/discovery';
 
 // ============================================================
 // FILTER PANEL
@@ -12,43 +13,6 @@ import { updateSearchParam } from '@/lib/api/contracts';
 // ============================================================
 
 // ---- Filter config data ----
-
-const SOURCE_GROUPS = [
-  {
-    label: 'Federal',
-    options: [
-      { value: 'federal_samgov', label: 'SAM.gov (Pittsburgh MSA)' },
-    ],
-  },
-  {
-    label: 'State',
-    options: [
-      { value: 'state_pa_emarketplace', label: 'PA eMarketplace' },
-      { value: 'state_pa_treasury', label: 'PA Treasury' },
-      { value: 'state_pa_bulletin', label: 'PA Bulletin' },
-      { value: 'state_pa_dced', label: 'PA DCED' },
-    ],
-  },
-  {
-    label: 'Local',
-    options: [
-      { value: 'local_allegheny', label: 'Allegheny County (Active)' },
-      { value: 'local_pittsburgh', label: 'City of Pittsburgh' },
-      { value: 'local_ura', label: 'Urban Redevelopment Authority' },
-      { value: 'local_housing_authority', label: 'Housing Authority of Pittsburgh' },
-    ],
-  },
-  {
-    label: 'Education',
-    options: [
-      { value: 'education_pitt', label: 'University of Pittsburgh' },
-      { value: 'education_cmu', label: 'Carnegie Mellon' },
-      { value: 'education_ccac', label: 'CCAC' },
-      { value: 'education_pgh_schools', label: 'Pittsburgh Public Schools' },
-      { value: 'education_duquesne', label: 'Duquesne University' },
-    ],
-  },
-];
 
 const THRESHOLD_OPTIONS = [
   { value: '', label: 'All Sizes' },
@@ -172,6 +136,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
   const selectedSetAsides = new Set((searchParams.get('set_aside') ?? '').split(',').filter(Boolean));
   const selectedStatuses = new Set((searchParams.get('status') ?? 'active').split(',').filter(Boolean));
   const selectedThreshold = searchParams.get('threshold') ?? '';
+  const aiOnly = searchParams.get('ai_only') === 'true';
   const minValue = searchParams.get('min_value') ?? '';
   const maxValue = searchParams.get('max_value') ?? '';
   const deadlineAfter = searchParams.get('deadline_after') ?? '';
@@ -196,6 +161,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
     selectedSetAsides.size > 0 ||
     selectedStatuses.size > 0 ||
     selectedThreshold ||
+    aiOnly ||
     minValue ||
     maxValue ||
     deadlineAfter ||
@@ -205,7 +171,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
     const qs = updateSearchParam(new URLSearchParams(searchParams.toString()), {
       source: null, contract_type: null, naics_sector: null, set_aside: null, status: null,
       threshold: null, min_value: null, max_value: null,
-      deadline_after: null, deadline_before: null, page: null,
+      deadline_after: null, deadline_before: null, ai_only: null, page: null,
     });
     router.push(`${pathname}?${qs}`, { scroll: false });
   }
@@ -220,7 +186,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
           {hasAnyFilter && (
             <span className="bg-blue-600 text-white text-xs font-bold px-1.5 py-0.5 rounded-full">
               {[selectedSources.size, selectedTypes.size, selectedSectors.size, selectedSetAsides.size, selectedStatuses.size,
-                selectedThreshold ? 1 : 0, minValue || maxValue ? 1 : 0,
+                selectedThreshold ? 1 : 0, aiOnly ? 1 : 0, minValue || maxValue ? 1 : 0,
                 deadlineAfter || deadlineBefore ? 1 : 0].reduce((a, b) => a + b, 0)}
             </span>
           )}
@@ -239,7 +205,7 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
       <div className="px-4 divide-y divide-gray-100">
         {/* Source */}
         <FilterSection title="Source">
-          {SOURCE_GROUPS.map((group) => (
+          {PITTSBURGH_SOURCE_GROUPS.map((group) => (
             <div key={group.label} className="mb-2">
               <p className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-1">
                 {group.label}
@@ -254,6 +220,20 @@ export function FilterPanel({ className = '' }: FilterPanelProps) {
               ))}
             </div>
           ))}
+        </FilterSection>
+
+        <FilterSection title="Focus">
+          <div className="bg-amber-50 border border-amber-100 rounded-lg p-3 mb-3">
+            <p className="text-xs text-amber-800">
+              Narrow the feed to active solicitations that mention AI, machine learning, copilots, chatbots,
+              OCR, document intelligence, predictive analytics, or similar emerging-tech work.
+            </p>
+          </div>
+          <FilterCheckbox
+            label="AI / Emerging Tech opportunities only"
+            checked={aiOnly}
+            onChange={(checked) => applyUpdate({ ai_only: checked ? 'true' : null })}
+          />
         </FilterSection>
 
         {/* Status — DEFAULT TO ACTIVE ONLY */}

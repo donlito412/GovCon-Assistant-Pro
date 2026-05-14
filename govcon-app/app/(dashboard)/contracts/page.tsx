@@ -102,6 +102,7 @@ function ContractsPageInner() {
   const searchParams = useSearchParams();
   const page = parseInt(searchParams.get('page') ?? '1', 10);
   const statusParam = searchParams.get('status') ?? 'active';
+  const aiOnly = searchParams.get('ai_only') === 'true';
   const isClosed = statusParam.includes('closed') || statusParam.includes('awarded') || statusParam.includes('cancelled');
 
   const { data, isLoading, error } = useContracts({ limit: String(PAGE_SIZE) });
@@ -116,11 +117,16 @@ function ContractsPageInner() {
       {/* Page header */}
       <div className="flex items-center justify-between flex-wrap gap-3">
         <div>
-          <h1 className="text-2xl font-bold text-gray-900">Contracts</h1>
+          <h1 className="text-2xl font-bold text-gray-900">Active Opportunities</h1>
           <p className="text-sm text-gray-500 mt-0.5">
-            {isClosed ? 'Closed/Expired Pittsburgh-area opportunities' : 'Active Pittsburgh-area opportunities — bid before the deadline'}
+            {isClosed ? 'Closed/expired Pittsburgh-area opportunities' : 'Active Pittsburgh-area procurement opportunities from official local, state, federal, and higher-ed sources'}
             {!isClosed && <span className="text-blue-600 font-medium ml-2">(Closed contracts → <a href="/awards" className="underline">Awards page</a>)</span>}
           </p>
+          {aiOnly && (
+            <p className="text-xs font-semibold text-amber-700 mt-1">
+              AI / Emerging Tech filter is on.
+            </p>
+          )}
         </div>
       </div>
 

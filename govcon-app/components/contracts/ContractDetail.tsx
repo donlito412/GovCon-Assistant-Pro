@@ -10,6 +10,7 @@ import {
 import { Badge, sourceBadgeVariant, sourceLabel, contractTypeBadgeVariant, thresholdBadgeVariant, thresholdLabel } from '../ui/Badge';
 import { DeadlineChip } from '../ui/DeadlineChip';
 import { formatValue, type ContractListItem } from '@/lib/api/contracts';
+import { isAiOpportunityText } from '@/lib/contracts/discovery';
 
 // ============================================================
 // CONTRACT DETAIL
@@ -36,6 +37,7 @@ function MetaRow({ icon: Icon, label, value }: { icon: React.ElementType; label:
 
 export function ContractDetail({ contract, onAddToPipeline }: ContractDetailProps) {
   const [descExpanded, setDescExpanded] = useState(false);
+  const isAiOpportunity = isAiOpportunityText(contract.title, contract.description);
 
   const longDescription = (contract.description?.length ?? 0) > 400;
   const descriptionDisplay = longDescription && !descExpanded
@@ -76,6 +78,9 @@ export function ContractDetail({ contract, onAddToPipeline }: ContractDetailProp
           )}
           {contract.set_aside_type && contract.set_aside_type !== 'unrestricted' && (
             <Badge variant="set_aside">{contract.set_aside_type.toUpperCase()}</Badge>
+          )}
+          {isAiOpportunity && (
+            <Badge variant="neutral">AI / Emerging Tech</Badge>
           )}
         </div>
         <h1 className="text-xl font-bold text-white leading-snug">{contract.title}</h1>

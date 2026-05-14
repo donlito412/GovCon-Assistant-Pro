@@ -27,6 +27,7 @@ export const dynamic = 'force-dynamic';
 
 import { NextRequest, NextResponse } from 'next/server';
 import { createServerSupabaseClient } from '@/lib/supabase';
+import { aiOpportunityClauses } from '@/lib/contracts/discovery';
 
 const DEFAULT_PAGE_SIZE = 25;
 const MAX_PAGE_SIZE = 100;
@@ -52,6 +53,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   const deadlineAfter = searchParams.get('deadline_after') ?? '';
   const deadlineBefore = searchParams.get('deadline_before') ?? '';
   const statuses = parseCommaSeparated(searchParams.get('status'));
+  const aiOnly = searchParams.get('ai_only') === 'true';
   const sortParam = searchParams.get('sort') ?? 'deadline:asc';
   const page = Math.max(1, parseInt(searchParams.get('page') ?? '1', 10));
   const limit = Math.min(MAX_PAGE_SIZE, Math.max(1, parseInt(searchParams.get('limit') ?? String(DEFAULT_PAGE_SIZE), 10)));
@@ -77,6 +79,10 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     // Full-text search on title + description
     if (q.trim()) {
       query = query.or(`title.ilike.%${q}%,description.ilike.%${q}%,agency_name.ilike.%${q}%`);
+    }
+
+    if (aiOnly) {
+      query = query.or(aiOpportunityClauses().join(','));
     }
 
     // Source filter

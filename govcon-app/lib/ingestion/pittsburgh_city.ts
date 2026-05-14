@@ -41,14 +41,13 @@ async function scrapeCityHtml(url: string): Promise<{ opportunities: ScrapedOppo
     const html = await res.text();
     const $ = cheerio.load(html);
 
-    const KW = /RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal|Quote|Procurement/i;
+    const KW = /RFP|RFQ|IFB|ITB|SOQ|RFI|Bid|Solicitation|Proposal|Quote|Procurement|Open|Due/i;
 
     // Anchor-based extraction (most listings are <a> tags)
     $('a').each((_i, el) => {
       const $a = $(el);
       const text = $a.text().replace(/\s+/g, ' ').trim();
       if (!text || text.length < 8 || text.length > 220) return;
-      if (!KW.test(text)) return;
       const href = $a.attr('href');
       if (!href || href.startsWith('mailto:') || href.startsWith('tel:') || href.startsWith('#')) return;
       const detailUrl = new URL(href, url).toString();
@@ -56,7 +55,8 @@ async function scrapeCityHtml(url: string): Promise<{ opportunities: ScrapedOppo
       seen.add(detailUrl);
 
       // Try to find a date near the anchor (parent or sibling)
-      const ctx = $a.parent().text() || '';
+      const ctx = ($a.closest('tr, li, article, section, div').text() || '').replace(/\s+/g, ' ').trim();
+      if (!KW.test(`${text} ${ctx}`)) return;
       const deadlineIso = parseToIso(ctx) ?? undefined;
 
       opportunities.push({
@@ -101,20 +101,20 @@ async function scrapeProcureNowEmbed(url: string): Promise<{ opportunities: Scra
 
     const html = await res.text();
     const $ = cheerio.load(html);
-    const KW = /RFP|RFQ|IFB|ITB|SOQ|RFI|Bid|Solicitation|Proposal|Quote|Project/i;
+    const KW = /RFP|RFQ|IFB|ITB|SOQ|RFI|Bid|Solicitation|Proposal|Quote|Project|Open|Due/i;
 
     $('a').each((_i, el) => {
       const $a = $(el);
       const href = $a.attr('href');
       const title = $a.text().replace(/\s+/g, ' ').trim();
       if (!href || !title || title.length < 8 || title.length > 220) return;
-      if (!KW.test(title)) return;
 
       const detailUrl = new URL(href, url).toString();
       if (seen.has(detailUrl)) return;
       seen.add(detailUrl);
 
       const context = $a.closest('tr, li, article, section, div').text().replace(/\s+/g, ' ').trim();
+      if (!KW.test(`${title} ${context}`)) return;
       const deadlineIso = parseToIso(context) ?? undefined;
 
       opportunities.push({

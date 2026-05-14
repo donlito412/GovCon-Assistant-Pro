@@ -6,6 +6,7 @@ import { ExternalLink, PlusCircle } from 'lucide-react';
 import { Badge, sourceBadgeVariant, sourceLabel, contractTypeBadgeVariant, thresholdBadgeVariant, thresholdLabel } from '../ui/Badge';
 import { DeadlineChip } from '../ui/DeadlineChip';
 import { formatValue, type ContractListItem } from '@/lib/api/contracts';
+import { isAiOpportunityText } from '@/lib/contracts/discovery';
 
 // ============================================================
 // CONTRACT TABLE
@@ -61,6 +62,11 @@ export function ContractTable({ contracts, onAddToPipeline }: ContractTableProps
                 )}
                 {c.solicitation_number && (
                   <span className="text-xs text-gray-400">#{c.solicitation_number}</span>
+                )}
+                {isAiOpportunityText(c.title, c.description) && (
+                  <div className="mt-1">
+                    <Badge variant="neutral">AI / Emerging Tech</Badge>
+                  </div>
                 )}
               </td>
 

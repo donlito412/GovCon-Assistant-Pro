@@ -6,6 +6,7 @@ import { MapPin, Building2, Hash, ExternalLink, PlusCircle } from 'lucide-react'
 import { Badge, sourceBadgeVariant, sourceLabel, contractTypeBadgeVariant, thresholdBadgeVariant, thresholdLabel } from '../ui/Badge';
 import { DeadlineChip } from '../ui/DeadlineChip';
 import { formatValue, type ContractListItem } from '@/lib/api/contracts';
+import { isAiOpportunityText } from '@/lib/contracts/discovery';
 
 // ============================================================
 // CONTRACT CARD
@@ -43,6 +44,7 @@ function cleanAgencyName(raw: string | null | undefined): string | null {
 export function ContractCard({ contract, onAddToPipeline }: ContractCardProps) {
   const descriptionExcerpt = cleanDescription(contract.description);
   const agencyDisplay = cleanAgencyName(contract.agency_name);
+  const isAiOpportunity = isAiOpportunityText(contract.title, contract.description);
 
   const location = [contract.place_of_performance_city, contract.place_of_performance_state]
     .filter(Boolean)
@@ -67,6 +69,9 @@ export function ContractCard({ contract, onAddToPipeline }: ContractCardProps) {
         )}
         {contract.set_aside_type && contract.set_aside_type !== 'unrestricted' && (
           <Badge variant="set_aside">{contract.set_aside_type.toUpperCase()}</Badge>
+        )}
+        {isAiOpportunity && (
+          <Badge variant="neutral">AI / Emerging Tech</Badge>
         )}
         {contract.status !== 'active' && (
           <Badge variant={contract.status as 'closed' | 'awarded' | 'cancelled'}>

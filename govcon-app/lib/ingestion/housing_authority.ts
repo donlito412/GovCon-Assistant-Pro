@@ -45,14 +45,16 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
         const href = $a.attr('href');
         if (!href) return;
         const title = $a.text().replace(/\s+/g, ' ').trim();
+        const context = $a.closest('article, li, tr, div, section').text().replace(/\s+/g, ' ').trim();
+        const combinedText = `${title} ${context}`.trim();
         if (!title || title.length < 6) return;
-        if (!/RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal|Quote/i.test(title)) return;
+        if (!/RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal|Quote|OPEN/i.test(combinedText)) return;
+        if (/addendum|sign in sheet|pre[- ]submission|download|login as a vendor/i.test(combinedText)) return;
 
         const detailUrl = new URL(href, url).toString();
         if (seen.has(detailUrl)) return;
         seen.add(detailUrl);
 
-        const context = $a.closest('article, li, tr, div, section').text().replace(/\s+/g, ' ').trim();
         const deadlineIso = parseToIso(context) ?? undefined;
         const dedup = computeDedupHash(title, 'HACP', deadlineIso ?? null);
         opportunities.push({

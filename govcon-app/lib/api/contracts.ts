@@ -58,6 +58,7 @@ export interface ContractFilters {
   deadline_after?: string;
   deadline_before?: string;
   status?: string;
+  ai_only?: string;
   sort?: string;
   page?: string;
   limit?: string;
@@ -105,6 +106,7 @@ export function useContracts(overrides?: Partial<ContractFilters>) {
     deadline_after: searchParams.get('deadline_after') ?? undefined,
     deadline_before: searchParams.get('deadline_before') ?? undefined,
     status: searchParams.get('status') ?? 'active',  // Default to active opportunities only
+    ai_only: searchParams.get('ai_only') ?? undefined,
     sort: searchParams.get('sort') ?? 'deadline:asc',
     page: searchParams.get('page') ?? '1',
     limit: searchParams.get('limit') ?? '25',
