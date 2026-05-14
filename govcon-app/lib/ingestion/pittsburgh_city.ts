@@ -189,7 +189,7 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
   // SECONDARY: engage.pittsburghpa.gov procurement opportunities
   const engage = await scrapeCityHtml(ENGAGE_URL);
   for (const o of engage.opportunities) {
-    if (!seenUrls.has(o.url)) {
+    if (o.url && !seenUrls.has(o.url)) {
       opportunities.push(o);
       seenUrls.add(o.url);
     }
@@ -199,7 +199,7 @@ export async function scrapePittsburghCity(): Promise<ScraperResult> {
   // FALLBACK: older page-HTML extraction from the main city page.
   const primaryFallback = await scrapeCityHtml(PRIMARY_URL);
   for (const o of primaryFallback.opportunities) {
-    if (!seenUrls.has(o.url)) {
+    if (o.url && !seenUrls.has(o.url)) {
       opportunities.push(o);
       seenUrls.add(o.url);
     }
