@@ -7,17 +7,17 @@ export const dynamic = 'force-dynamic';
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
-import { createServerSupabaseClient } from '@/lib/supabase';
+import { getRouteUser } from '@/lib/auth/route';
 import { streamChatResponse, saveConversation, type ChatMessage } from '@/lib/ai/assistant';
 import type { AssistantContext } from '@/lib/ai/prompts';
 
 export const maxDuration = 120;
 
 export async function POST(req: NextRequest): Promise<NextResponse | Response> {
-  // Single-user personal tool — auth not required
-  const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id ?? 'local';
+  const user = await getRouteUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const userId = user.id;
 
   let body: any;
   try { body = await req.json(); } catch { return NextResponse.json({ error: 'Invalid JSON' }, { status: 400 }); }
@@ -49,9 +49,10 @@ export async function POST(req: NextRequest): Promise<NextResponse | Response> {
 
 // GET — list conversations
 export async function GET(req: NextRequest): Promise<NextResponse> {
-  const supabase = createServerSupabaseClient();
-  const { data: { user } } = await supabase.auth.getUser();
-  const userId = user?.id ?? 'local';
+  const user = await getRouteUser();
+  if (!user) return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+
+  const userId = user.id;
 
   const { listConversations, loadConversation } = await import('../../../lib/ai/assistant');
   const { searchParams } = new URL(req.url);

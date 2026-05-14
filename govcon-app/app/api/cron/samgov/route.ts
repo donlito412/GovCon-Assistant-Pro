@@ -7,6 +7,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isAuthorizedCronRequest } from '@/lib/cron/auth';
 
 export async function GET(req: NextRequest): Promise<NextResponse> {
   const start = Date.now();
@@ -20,8 +21,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const auth = req.headers.get('authorization') ?? '';
-  if (auth !== `Bearer ${cronSecret}` && auth !== cronSecret) {
+  if (!isAuthorizedCronRequest(req, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 

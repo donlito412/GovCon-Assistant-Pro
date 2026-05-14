@@ -18,6 +18,7 @@ export const dynamic = 'force-dynamic';
 // ============================================================
 
 import { NextRequest, NextResponse } from 'next/server';
+import { isAuthorizedCronRequest } from '@/lib/cron/auth';
 
 interface IngestResult {
   source: string;
@@ -96,8 +97,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
     );
   }
 
-  const providedSecret = req.headers.get('authorization') ?? '';
-  if (providedSecret !== cronSecret) {
+  if (!isAuthorizedCronRequest(req, cronSecret)) {
     console.warn('[cron/ingest] Unauthorized request — bad or missing authorization header.');
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }

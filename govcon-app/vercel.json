@@ -1,16 +1,12 @@
 {
     "crons": [
           {
-                  "path": "/api/cron/samgov",
-                  "schedule": "0 0 * * *"
+                  "path": "/api/cron/ingest",
+                  "schedule": "0 11 * * *"
           },
           {
                   "path": "/api/cron/usaspending",
-                  "schedule": "0 0 * * 0"
-          },
-          {
-                  "path": "/api/cron/grantsgov",
-                  "schedule": "0 2 * * *"
+                  "schedule": "0 12 * * 0"
           }
     ]
 }

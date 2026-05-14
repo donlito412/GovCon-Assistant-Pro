@@ -2,13 +2,16 @@ import React from 'react';
 import Link from 'next/link';
 import { Bell, Menu, Globe } from 'lucide-react';
 import { Sidebar } from '@/components/layout/Sidebar';
+import { requireAuth } from '@/lib/auth/session';
 
 // ============================================================
 // DASHBOARD LAYOUT
 // GovTribe-style dark sidebar + light content area.
 // ============================================================
 
-export default function DashboardLayout({ children }: { children: React.ReactNode }) {
+export default async function DashboardLayout({ children }: { children: React.ReactNode }) {
+  await requireAuth();
+
   return (
     <div className="min-h-screen flex bg-gray-50">
       {/* Dark Sidebar */}

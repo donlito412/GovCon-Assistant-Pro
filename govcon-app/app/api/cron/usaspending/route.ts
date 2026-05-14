@@ -14,6 +14,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import crypto from 'crypto';
 import { fetchPAAwards, type USASpendingAward } from '@/lib/ingestion/usaspending';
 import { upsertAwards } from '@/lib/db/upsert';
+import { isAuthorizedCronRequest } from '@/lib/cron/auth';
 
 interface ScrapedAward {
   source: string;
@@ -86,8 +87,7 @@ export async function GET(req: NextRequest): Promise<NextResponse> {
   if (!cronSecret) {
     return NextResponse.json({ error: 'CRON_SECRET missing.' }, { status: 500 });
   }
-  const auth = req.headers.get('authorization') ?? '';
-  if (auth !== `Bearer ${cronSecret}` && auth !== cronSecret) {
+  if (!isAuthorizedCronRequest(req, cronSecret)) {
     return NextResponse.json({ error: 'Unauthorized.' }, { status: 401 });
   }
 

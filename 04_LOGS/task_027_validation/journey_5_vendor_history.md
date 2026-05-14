@@ -1,5 +1,26 @@
 # Journey 5: Click a vendor, see what else they've won
 
-**GovTribe:** Clicking a vendor name takes you to a Vendor Profile. This page shows their total footprint in the federal market: total dollars won, which agencies they work with most, and a list of their recent prime contract awards.
+**Validated against:** live build `e53786e` on https://gov-con-assistant-pro.vercel.app/vendors/TEST123456789 (deployed 2026-05-05)
 
-**Our App:** The `/dashboard/vendors/[uei]` page is now implemented. When a user clicks a vendor from the Agency profile or Contract detail page, they arrive here. The page queries the unified `records` table for all awards matching that `vendor_uei`. It calculates their total dollars won, aggregates their wins by agency to show their best customers, and lists out their recent awards with links back to the specific contract detail pages. This completes the circular value loop (Opportunity -> Agency -> Vendor -> Contract).
+**GovTribe:** Vendor profile = total dollars won, agencies they work
+with, recent prime awards.
+
+**Our App:**
+- `/vendors` (no UEI) returns 404 — no index page exists.
+- `/vendors/[uei]` (with any UEI) renders an empty-state shell:
+  > Vendor not found or has no award history in our system.
+
+**What works:**
+- Dynamic route `[uei]` handles arbitrary UEIs gracefully (no crash).
+- The page component exists (105 lines per `wc -l`).
+
+**What doesn't work:**
+- No `/vendors` index → users can't browse vendors at all unless they
+  arrive via a vendor link on another page (and Journey 4 showed those
+  links won't render either, because Top Vendors aggregations are empty).
+- No vendor profile renders with real data because `contract_awards`
+  has no USASpending rows yet.
+
+**Verdict:** PARTIAL. The shell ships; nothing routes to it. Defer to
+TASK_031 (USASpending cron + agency/vendor join) and TASK_032 (vendor
+index page if Jon wants browsable vendors).
