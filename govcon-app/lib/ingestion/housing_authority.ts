@@ -10,8 +10,9 @@ import type { ScraperResult, ScrapedOpportunity } from './shared/normalize_share
 
 const SOURCE = 'local_housing_authority' as const;
 const URLS = [
+  'https://hacp.org/doing-business/procurement-search/?procurement-end-date=&procurement-open%5B%5D=all&procurement-start-date=&procurement_search=true',
+  'https://hacp.org/doing-business/',
   'https://hacp.org/business-with-us/contracting-procurement/',
-  'https://www.hacp.org/business-with-us/procurement/',
 ];
 const HEADERS = {
   'User-Agent':
@@ -24,6 +25,7 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
   const start = Date.now();
   const opportunities: ScrapedOpportunity[] = [];
   const errors: string[] = [];
+  const seen = new Set<string>();
 
   for (const url of URLS) {
     try {
@@ -38,17 +40,21 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      // HACP lists active solicitations as PDF links with title text near them
-      $('a[href*=".pdf"], a[href*="solicitation"], a[href*="rfp"], a[href*="ifb"]').each((_i, el) => {
+      $('a[href*="/procurements/"], a[href*=".pdf"], a[href*="solicitation"], a[href*="rfp"], a[href*="ifb"]').each((_i, el) => {
         const $a = $(el);
         const href = $a.attr('href');
         if (!href) return;
-        const title = $a.text().trim();
+        const title = $a.text().replace(/\s+/g, ' ').trim();
         if (!title || title.length < 6) return;
         if (!/RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal|Quote/i.test(title)) return;
 
         const detailUrl = new URL(href, url).toString();
-        const dedup = computeDedupHash(title, 'HACP', null);
+        if (seen.has(detailUrl)) return;
+        seen.add(detailUrl);
+
+        const context = $a.closest('article, li, tr, div, section').text().replace(/\s+/g, ' ').trim();
+        const deadlineIso = parseToIso(context) ?? undefined;
+        const dedup = computeDedupHash(title, 'HACP', deadlineIso ?? null);
         opportunities.push({
           source: SOURCE,
           title: title.slice(0, 200),
@@ -58,7 +64,7 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
           canonical_sources: [SOURCE],
           contract_type: mapContractType(title),
           threshold_category: 'unknown',
-          deadline: undefined,
+          deadline: deadlineIso,
           posted_date: undefined,
           place_of_performance_city: 'Pittsburgh',
           place_of_performance_state: 'PA',
@@ -68,7 +74,6 @@ export async function scrapeHousingAuthority(): Promise<ScraperResult> {
           status: 'active',
         });
       });
-      if (opportunities.length > 0) break;
     } catch (err) {
       errors.push(`${url}: ${err instanceof Error ? err.message : String(err)}`);
     }

@@ -9,8 +9,9 @@ import type { ScraperResult, ScrapedOpportunity } from './shared/normalize_share
 
 const SOURCE = 'local_ura' as const;
 const URLS = [
+  'https://www.ura.org/proposals',
+  'https://www.ura.org/pages/contractor',
   'https://www.ura.org/pages/business-opportunities',
-  'https://www.ura.org/pages/rfp-rfq',
 ];
 const HEADERS = {
   'User-Agent':
@@ -23,6 +24,7 @@ export async function scrapeURA(): Promise<ScraperResult> {
   const start = Date.now();
   const opportunities: ScrapedOpportunity[] = [];
   const errors: string[] = [];
+  const seen = new Set<string>();
 
   for (const url of URLS) {
     try {
@@ -37,22 +39,19 @@ export async function scrapeURA(): Promise<ScraperResult> {
       const html = await res.text();
       const $ = cheerio.load(html);
 
-      // URA's opportunity blocks: look for headings + adjacent links/description
-      $('h2, h3, .opportunity, article').each((_i, el) => {
-        const $el = $(el);
-        const title = $el.text().trim().slice(0, 200);
-        if (!title || title.length < 8) return;
+      $('a[href*="/proposals/"], a[href*="ionwave"], a[href*="Login.aspx"]').each((_i, el) => {
+        const $a = $(el);
+        const title = $a.text().replace(/\s+/g, ' ').trim().slice(0, 200);
+        const href = $a.attr('href');
+        if (!href || !title || title.length < 6) return;
+        if (/register|login|supplier registration|how to register/i.test(title)) return;
+        if (!/RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal|Qualifications|Services/i.test(title)) return;
 
-        // Heuristic: it's an opportunity if heading mentions RFP/RFQ/IFB/SOQ etc.
-        if (!/RFP|RFQ|IFB|SOQ|RFI|Bid|Solicitation|Proposal/i.test(title)) return;
+        const detailUrl = new URL(href, url).toString();
+        if (seen.has(detailUrl)) return;
+        seen.add(detailUrl);
 
-        const linkEl = $el.find('a').first();
-        const link = linkEl.attr('href');
-        const detailUrl = link ? new URL(link, url).toString() : url;
-
-        // Look for nearby date text
-        let dateText = $el.next().text().trim().slice(0, 100);
-        if (!dateText) dateText = $el.parent().text().slice(0, 200);
+        const dateText = $a.closest('article, li, div, section').text().replace(/\s+/g, ' ').trim().slice(0, 250);
         const deadlineIso = parseToIso(dateText) ?? undefined;
 
         opportunities.push({
@@ -74,7 +73,6 @@ export async function scrapeURA(): Promise<ScraperResult> {
           status: 'active',
         });
       });
-      if (opportunities.length > 0) break;
     } catch (err) {
       errors.push(`${url}: ${err instanceof Error ? err.message : String(err)}`);
     }
